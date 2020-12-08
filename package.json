@@ -18,6 +18,16 @@
     "url": "https://luca.scaringella.de"
   },
   "dependencies": {
+    "base64id": "2.0.0",
+    "emitix": "^1.1.0",
+    "@types/jsonwebtoken": "8.3.8",
+    "jsonwebtoken": "8.5.1",
+    "z-uws": "^3.0.2",
+    "zation-core-errors": "1.2.1",
+    "zation-core-events": "1.0.1",
+    "ziron-engine": "0.3.2",
+    "uuid": "3.4.0",
+    "@types/node": "^13.7.6"
   },
   "devDependencies": {
     "typescript": "^3.7.5",
