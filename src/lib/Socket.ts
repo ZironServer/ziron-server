@@ -19,6 +19,7 @@ import {Writable} from "./Utils";
 import {BadConnectionType, Transport, DataType, InvokeListener, TransmitListener} from "ziron-engine";
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "zation-core-events";
 import {SignOptions} from "jsonwebtoken";
+import {Block} from "./MiddlewareUtils";
 import {NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
 
 type LocalEventEmitter = EventEmitter<{
@@ -65,6 +66,8 @@ export default class Socket
 
     public readonly procedures: Procedures = {
         [InternalServerProcedures.Authenticate]: this._handleAuthenticateInvoke.bind(this),
+        [InternalServerProcedures.Subscribe]: this._handleSubscribeInvoke.bind(this),
+        [InternalServerProcedures.Publish]: this._handleClientPublishInvoke.bind(this)
     };
     /**
      * @description
@@ -75,6 +78,8 @@ export default class Socket
 
     public readonly receivers: Receivers = {
         [InternalServerReceivers.Deauthenticate]: this._deauthenticate.bind(this),
+        [InternalServerReceivers.Publish]: this._handleClientPublishTransmit.bind(this),
+        [InternalServerReceivers.Unsubscribe]: this._handleUnsubscribeTransmit.bind(this)
     };
     /**
      * @description
@@ -234,4 +239,71 @@ export default class Socket
         this.onUnknownTransmit(event,data,type);
     }
 
+    kickOut(channel: string, data?: any) {
+        const index = this.subscriptions.indexOf(channel);
+        if(index !== -1) {
+            this._server.internalBroker.socketUnsubscribe(this,channel);
+            (this.subscriptions as string[]).splice(index,1);
+            this.transmit(InternalServerTransmits.KickOut,[channel,data]);
+        }
+    }
+
+    private async _handleSubscribeInvoke(channel: any, end: (data?: any) => void, reject: (err?: any) => void) {
+        if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
+        else {
+            if(this._server.subscribeMiddleware) {
+                try {await this._server.subscribeMiddleware(this,channel);}
+                catch (err) {
+                    if(!(err instanceof Block)) this._server._emit('error', err);
+                    return end(4403);
+                }
+            }
+            if(!this.subscriptions.includes(channel)) {
+                this._server.internalBroker.socketSubscribe(this,channel);
+                (this.subscriptions as string[]).push(channel)
+            }
+            end();
+        }
+    }
+
+    private async _handleUnsubscribeTransmit(channel: any) {
+        if(typeof channel === "string") {
+            const index = this.subscriptions.indexOf(channel);
+            if(index !== -1) {
+                this._server.internalBroker.socketUnsubscribe(this,channel);
+                (this.subscriptions as string[]).splice(index,1);
+            }
+        }
+    }
+
+    private async _handleClientPublishInvoke(data: any, end: (data?: any) => void, reject: (err?: any) => void, type: DataType) {
+        if(!this._server._options.allowClientPublish) return end(4403);
+        data = data || [];
+        const channel = data[0];
+        if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
+        if(this._server.clientPublishMiddleware) {
+            try {await this._server.clientPublishMiddleware(this,channel,data[1]);}
+            catch (err) {
+                if(!(err instanceof Block)) this._server._emit('error', err);
+                return end(4403);
+            }
+        }
+        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON);
+        end();
+    }
+
+    private async _handleClientPublishTransmit(data: any, type: DataType) {
+        if(!this._server._options.allowClientPublish) return;
+        data = data || [];
+        const channel = data[0];
+        if(typeof channel !== "string") return;
+        if(this._server.clientPublishMiddleware) {
+            try {await this._server.clientPublishMiddleware(this,channel,data[1]);}
+            catch (err) {
+                if(!(err instanceof Block)) this._server._emit('error', err);
+                return;
+            }
+        }
+        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON);
+    }
 }
