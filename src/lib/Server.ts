@@ -7,12 +7,15 @@ Copyright(c) Luca Scaringella
 import ServerOptions from "./ServerOptions";
 import {createOriginsChecker, OriginsChecker} from "./OriginsChecker";
 import AuthEngine from "./AuthEngine";
+import Socket from "./Socket";
 import {ConnectionInfo, VerifyClientNext, WebSocketServer, WebSocket} from 'z-uws';
 import * as HTTP from "http";
 import * as HTTPS from "https";
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "zation-core-errors";
 import {Writable} from "./Utils";
+import {HandshakeUrlQuery} from "./HandshakeUrlQuery";
+import {InternalServerTransmits} from "zation-core-events";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -61,7 +64,10 @@ export default class Server {
      */
     public readonly _emit: LocalEventEmitter['emit'] = this._localEmitter.emit.bind(this._localEmitter);
 
+    public readonly clientCount: number = 0;
+    public readonly clients: Record<string, Socket> = {};
 
+    public connectionHandler: (socket: Socket) => Promise<void> | void = () => {};
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
@@ -100,4 +106,58 @@ export default class Server {
         this._wsServer.on('connection',this._handleSocketConnection.bind(this));
     }
 
+    private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {
+        let signedToken;
+        let attachment = undefined;
+
+        const url = req.url || '';
+        const indexOfSearch = url.indexOf('?');
+        const query = indexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
+        if(query.length){
+            try {
+                const args = JSON.parse(decodeURIComponent(query));
+                if(args) {
+                    attachment = (args as HandshakeUrlQuery).a;
+                    signedToken = (args as HandshakeUrlQuery).t;
+                }
+            }
+            catch (_) {}
+        }
+
+        const zSocket = new Socket(this,socket,req,attachment);
+        (this as Writable<Server>).clientCount++;
+        this.clients[zSocket.id] = zSocket;
+
+        try {
+            if(this.socketMiddleware){
+                try {await this.socketMiddleware(zSocket);}
+                catch (err) {
+                    if(err instanceof Block)
+                        zSocket.disconnect(err.code,err.message || 'Connection was blocked by socket middleware');
+                    else {
+                        this._emit('error', err);
+                        zSocket.disconnect(err.code ?? 4403,'Connection was blocked by socket middleware');
+                    }
+                    return;
+                }
+            }
+
+
+            await this.connectionHandler(zSocket);
+            zSocket.transmit(InternalServerTransmits.ConnectionReady,[this._options.pingInterval,authTokenState]);
+        }
+        catch (err) {
+            this._emit('error', err);
+            zSocket.disconnect(err.code ?? 1011,'Unknown connection error');
+        }
+    }
+    /**
+     * @internal
+     * @param socket
+     * @private
+     */
+    _removeSocket(socket: Socket) {
+        (this as Writable<Server>).clientCount--;
+        delete this.clients[socket.id];
+    }
 }
