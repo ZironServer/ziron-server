@@ -17,6 +17,9 @@ import {Writable} from "./Utils";
 import {HandshakeUrlQuery} from "./HandshakeUrlQuery";
 import {InternalServerTransmits} from "zation-core-events";
 import {Block} from "./MiddlewareUtils";
+import Exchange from "./Exchange";
+import InternalBroker from "./InternalBroker";
+import {defaultExternalBrokerClient} from "./ExternalBrokerClient";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -78,6 +81,12 @@ export default class Server {
     public clientPublishMiddleware: ClientPublishMiddleware | undefined;
     public publishOutMiddleware: PublishOutMiddleware | undefined;
 
+    /**
+     * @internal
+     */
+    public internalBroker: InternalBroker;
+
+    public exchange: Exchange;
     public refuseConnections: boolean = false;
 
     constructor(options: ServerOptions = {}) {
@@ -85,6 +94,10 @@ export default class Server {
 
         this.auth = new AuthEngine(this._options.auth);
         this.originsChecker = createOriginsChecker(this._options.origins);
+
+        this.internalBroker = new InternalBroker(this);
+        this.internalBroker.externalBrokerClient = defaultExternalBrokerClient;
+        this.exchange = this.internalBroker.exchange;
     }
 
     public listen: (port?: number, onListen?: () => void) => void = this._create.bind(this);
