@@ -16,6 +16,7 @@ import {ServerProtocolError} from "zation-core-errors";
 import {Writable} from "./Utils";
 import {HandshakeUrlQuery} from "./HandshakeUrlQuery";
 import {InternalServerTransmits} from "zation-core-events";
+import {Block} from "./MiddlewareUtils";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -77,6 +78,7 @@ export default class Server {
     public clientPublishMiddleware: ClientPublishMiddleware | undefined;
     public publishOutMiddleware: PublishOutMiddleware | undefined;
 
+    public refuseConnections: boolean = false;
 
     constructor(options: ServerOptions = {}) {
         Object.assign(this._options,options);
@@ -151,6 +153,7 @@ export default class Server {
             zSocket.disconnect(err.code ?? 1011,'Unknown connection error');
         }
     }
+
     /**
      * @internal
      * @param socket
@@ -159,5 +162,36 @@ export default class Server {
     _removeSocket(socket: Socket) {
         (this as Writable<Server>).clientCount--;
         delete this.clients[socket.id];
+    }
+
+    private _handleServerError(error: string | Error) {
+        this._emit('error',typeof error === 'string' ? new ServerProtocolError(error) : error);
+    }
+
+    private _verifyClient(info: ConnectionInfo, next: VerifyClientNext) {
+        if(this.refuseConnections) return next(false,403);
+        if(this.originsChecker(info.origin)) {
+            if(this.handshakeMiddleware){
+                (async () => {
+                    try {
+                        await this.handshakeMiddleware!(info.req);
+                        next(true);
+                    }
+                    catch (err) {
+                        if(err instanceof Block) next(false, err.code, err.message || 'Action was blocked by handshake middleware');
+                        else {
+                            this._emit('error', err);
+                            next(false, err.code ?? 403, 'Action was blocked by handshake middleware');
+                        }
+                    }
+                })();
+            }
+            else next(true);
+        }
+        else {
+            const err = new ServerProtocolError('Failed to authorize socket handshake - Invalid origin: ' + origin);
+            this._emit('warning', err);
+            next(false, 403, err.message);
+        }
     }
 }
