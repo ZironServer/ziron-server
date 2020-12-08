@@ -144,6 +144,11 @@ export default class Server {
                 }
             }
 
+            let authTokenState;
+            if(signedToken) {
+                try {await zSocket._processAuthToken(signedToken)}
+                catch (err) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
+            }
 
             await this.connectionHandler(zSocket);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,[this._options.pingInterval,authTokenState]);

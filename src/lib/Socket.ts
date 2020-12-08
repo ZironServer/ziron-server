@@ -44,6 +44,18 @@ export default class Socket
 
     public readonly open: boolean = true;
 
+    public readonly signedAuthToken: string | null = null;
+    public readonly authToken: any | null = null;
+    public readonly authenticated: boolean = false;
+    private setAuth<PT extends null | object>(authToken: PT, signedAuthToken: PT extends null ? null : string) {
+        const oldAuthToken = this.authToken;
+        (this as Writable<Socket>).authToken = authToken;
+        (this as Writable<Socket>).signedAuthToken = signedAuthToken;
+        (this as Writable<Socket>).authenticated = authToken != null;
+        if(oldAuthToken !== authToken)
+            this._emit('authTokenChange',authToken,oldAuthToken);
+    };
+
     private readonly _localEmitter: LocalEventEmitter = new EventEmitter();
     public readonly once: LocalEventEmitter['once'] = this._localEmitter.once.bind(this._localEmitter);
     public readonly on: LocalEventEmitter['on'] = this._localEmitter.on.bind(this._localEmitter);
@@ -51,6 +63,7 @@ export default class Socket
     private readonly _emit: LocalEventEmitter['emit'] = this._localEmitter.emit.bind(this._localEmitter);
 
     public readonly procedures: Procedures = {
+        [InternalServerProcedures.Authenticate]: this._handleAuthenticateInvoke.bind(this),
     };
     /**
      * @description
@@ -60,6 +73,7 @@ export default class Socket
     public onUnknownInvoke: InvokeListener = () => {};
 
     public readonly receivers: Receivers = {
+        [InternalServerReceivers.Deauthenticate]: this._deauthenticate.bind(this),
     };
     /**
      * @description
@@ -139,6 +153,23 @@ export default class Socket
         }
 
         this._clearListener();
+    /**
+     * @internal
+     */
+    public _deauthenticate() {
+        if(!this.authenticated) return;
+        this.setAuth(null,null);
+    }
+
+    public deauthenticate() {
+        this._deauthenticate();
+        this.transmit(InternalServerTransmits.RemoveAuthToken);
+    }
+
+    public async authenticate(payload: Record<string,any>, options?: SignOptions) {
+        const signedAuthToken = await this._server.auth.signToken(payload,options);
+        this.setAuth(payload,signedAuthToken);
+        this.transmit(InternalServerTransmits.SetAuthToken,signedAuthToken);
     }
 
     public disconnect(code?: number, reason?: string) {
@@ -146,6 +177,32 @@ export default class Socket
         if (this.open) {
             this._destroy(code, reason);
             this._socket.close(code, reason);
+        }
+    }
+
+    private async _handleAuthenticateInvoke(signedAuthToken: any, end: (data?: any) => void, reject: (err?: any) => void) {
+        try {
+            await this._processAuthToken(signedAuthToken);
+            end();
+        }
+        catch (err) {reject(err)}
+    }
+
+    /**
+     * @internal
+     * @param signedAuthToken
+     * @private
+     */
+    async _processAuthToken(signedAuthToken: string) {
+        try {
+            const plainAuthToken = await this._server.auth.verifyToken(signedAuthToken);
+            if(this._server.authenticateMiddleware)
+                await this._server.authenticateMiddleware(this, plainAuthToken, signedAuthToken);
+            this.setAuth(plainAuthToken,signedAuthToken);
+        }
+        catch (err) {
+            if(err && err.badAuthToken) this._server._emit('badSocketAuthToken',this,err,signedAuthToken);
+            throw err;
         }
     }
 
