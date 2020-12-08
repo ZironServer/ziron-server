@@ -22,7 +22,7 @@ export default interface ServerOptions {
     } | null,
     /**
      * The url path to the server.
-     * @default '/zation'
+     * @default '/ziron'
      */
     path?: string;
     /**

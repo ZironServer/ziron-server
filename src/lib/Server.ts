@@ -49,7 +49,7 @@ export default class Server {
         authTokenExpireCheckInterval: 12000,
         pingInterval: 8000,
         origins: null,
-        path: '/zation',
+        path: '/ziron',
         auth: {}
     };
 
