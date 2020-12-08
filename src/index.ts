@@ -11,9 +11,10 @@ import AuthEngine                from "./lib/AuthEngine";
 import Exchange                  from "./lib/Exchange";
 import {ExternalBrokerClient}    from "./lib/ExternalBrokerClient";
 import EventEmitter              from "emitix";
-import {TimeoutError}            from "ziron-engine";
+import {BackError, TimeoutError, Transport} from "ziron-engine";
 
 EventEmitter.onceTimeoutErrorCreator = () => new TimeoutError('Once timeout reached.','OnceListener');
+const prepareMultiTransmit = Transport.prepareMultiTransmit;
 
 export {
     Server,
@@ -21,5 +22,7 @@ export {
     Socket,
     AuthEngine,
     Exchange,
-    ExternalBrokerClient
+    ExternalBrokerClient,
+    BackError,
+    prepareMultiTransmit
 }
