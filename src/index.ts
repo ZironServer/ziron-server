@@ -13,6 +13,8 @@ import {ExternalBrokerClient}    from "./lib/ExternalBrokerClient";
 import EventEmitter              from "emitix";
 import {TimeoutError}            from "ziron-engine";
 
+EventEmitter.onceTimeoutErrorCreator = () => new TimeoutError('Once timeout reached.','OnceListener');
+
 export {
     Server,
     ServerOptions,
