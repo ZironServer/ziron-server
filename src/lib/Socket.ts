@@ -19,6 +19,7 @@ import {Writable} from "./Utils";
 import {BadConnectionType, Transport, DataType, InvokeListener, TransmitListener} from "ziron-engine";
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "zation-core-events";
 import {SignOptions} from "jsonwebtoken";
+import {NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -153,6 +154,8 @@ export default class Socket
         }
 
         this._clearListener();
+        this._server._removeSocket(this);
+    }
 
     public isAuthTokenExpired(): boolean {
         if (this.authToken && this.authToken.exp != null)
