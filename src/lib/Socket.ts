@@ -158,6 +158,7 @@ export default class Socket
                 (`Socket connection closed with status: ${code}` + (reason ? (` and reason: ${reason}.`) : '.')), code));
         }
 
+        this._unsubscribeAll();
         this._clearListener();
         this._server._removeSocket(this);
     }
@@ -274,6 +275,13 @@ export default class Socket
                 (this.subscriptions as string[]).splice(index,1);
             }
         }
+    }
+
+    private _unsubscribeAll() {
+        const len = this.subscriptions.length;
+        for(let i = 0; i < len; i++)
+            this._server.internalBroker.socketUnsubscribe(this,this.subscriptions[i]);
+        (this as Writable<Socket>).subscriptions = [];
     }
 
     private async _handleClientPublishInvoke(data: any, end: (data?: any) => void, reject: (err?: any) => void, type: DataType) {
