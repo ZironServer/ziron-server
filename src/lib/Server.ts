@@ -29,6 +29,23 @@ type ClientPublishMiddleware = (socket: Socket, channel: string, data: any) => P
 type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 
 export default class Server {
+
+    /**
+     * @internal
+     */
+    readonly _options: Required<ServerOptions> = {
+        state: null,
+        maxPayload: null,
+        perMessageDeflate: null,
+        allowClientPublish: true,
+        ackTimeout: 10000,
+        authTokenExpireCheckInterval: 12000,
+        pingInterval: 8000,
+        origins: null,
+        path: '/zation',
+        auth: {}
+    };
+
     public readonly originsChecker: OriginsChecker;
     public readonly auth: AuthEngine;
 
@@ -56,6 +73,8 @@ export default class Server {
 
 
     constructor(options: ServerOptions = {}) {
+        Object.assign(this._options,options);
+
         this.auth = new AuthEngine(this._options.auth);
         this.originsChecker = createOriginsChecker(this._options.origins);
     }
