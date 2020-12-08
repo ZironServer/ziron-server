@@ -153,6 +153,21 @@ export default class Socket
         }
 
         this._clearListener();
+
+    public isAuthTokenExpired(): boolean {
+        if (this.authToken && this.authToken.exp != null)
+            return Date.now() > this.authToken.exp * 1000
+        return false;
+    }
+
+    /**
+     * @internal
+     * @private
+     */
+    public _checkAuthTokenExpire() {
+        if(this.isAuthTokenExpired()) this.deauthenticate();
+    }
+
     /**
      * @internal
      */

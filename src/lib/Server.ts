@@ -103,6 +103,11 @@ export default class Server {
         },onListen);
 
         this._wsServer.startAutoPing(this._options.pingInterval,true);
+        this._authTokenExpireCheckerTicker = setInterval(() => {
+            for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
+                this.clients[id]._checkAuthTokenExpire();
+            }
+        },this._options.authTokenExpireCheckInterval);
 
         this._wsServer.on('error',this._handleServerError.bind(this));
         this._wsServer.on('connection',this._handleSocketConnection.bind(this));
