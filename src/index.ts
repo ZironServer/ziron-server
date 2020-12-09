@@ -9,7 +9,7 @@ import ServerOptions             from "./lib/ServerOptions";
 import Socket                    from "./lib/Socket";
 import AuthEngine                from "./lib/AuthEngine";
 import Exchange                  from "./lib/Exchange";
-import {ExternalBrokerClient}    from "./lib/ExternalBrokerClient";
+import {ExternalBrokerClient}    from "./lib/broker/ExternalBrokerClient";
 import EventEmitter              from "emitix";
 import {BackError, TimeoutError, Transport} from "ziron-engine";
 

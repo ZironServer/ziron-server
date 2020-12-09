@@ -4,13 +4,13 @@ GitHub: LucaCode
 Copyright(c) Luca Scaringella
  */
 
-import Socket from "./Socket";
+import Socket from "../Socket";
 import {Transport, DataType} from "ziron-engine";
 import {InternalServerTransmits} from "zation-core-events";
 import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBrokerClient";
-import Exchange from "./Exchange";
-import Server from "./Server";
-import {Block} from "./MiddlewareUtils";
+import Exchange from "../Exchange";
+import Server from "../Server";
+import {Block} from "../MiddlewareUtils";
 
 export default class InternalBroker {
 

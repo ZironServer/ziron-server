@@ -18,8 +18,8 @@ import {HandshakeUrlQuery} from "./HandshakeUrlQuery";
 import {InternalServerTransmits} from "zation-core-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
-import InternalBroker from "./InternalBroker";
-import {defaultExternalBrokerClient} from "./ExternalBrokerClient";
+import InternalBroker from "./broker/InternalBroker";
+import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
