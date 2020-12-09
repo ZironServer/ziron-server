@@ -4,29 +4,70 @@ GitHub: LucaCode
 Copyright(c) Luca Scaringella
  */
 
-import {AuthOptions}            from "./AuthEngine";
+import {AuthOptions} from "./AuthEngine";
 
 export default interface ServerOptions {
-    state?: string | null,
+    /**
+     * @description
+     * Specifies the join URL to the state server.
+     * This is required if you want to run a cluster.
+     */
+    state?: string | null;
+    /**
+     * @description
+     * Specifies the auth options that are used to sign and verify JSON web tokens.
+     */
     auth?: AuthOptions,
+    /**
+     * @description
+     * Specifies if the client is allowed to publish into channels.
+     * The PublishIn middleware will still be used to check access.
+     */
     allowClientPublish?: boolean,
+    /**
+     * @description
+     * Specifies the limit of channels a socket can subscribe.
+     * Null means unlimited.
+     * @default 1000
+     */
+    socketChannelLimit?: number | null,
+    /**
+     * @description
+     * Specifies the default ack timeout.
+     * @default 7000
+     */
     ackTimeout?: number,
+    /**
+     * @description
+     * Specifies the interval in that the server pings the client sockets.
+     * The client sockets need to send a pong before the next ping
+     * is sent otherwise the socket will be disconnected.
+     */
     pingInterval?: number,
     /**
+     * @description
+     * The interval when the server checks the for expired auth tokens.
      * @default 12000ms
      */
     authTokenExpireCheckInterval?: number,
-    maxPayload?: number | null,
-    perMessageDeflate?: boolean | {
-        serverNoContextTakeover: boolean;
-    } | null,
     /**
-     * The url path to the server.
+     * @description
+     * Specifies the maximum allowed message size in bytes.
+     * @default 16777216
+     */
+    maxPayload?: number | null,
+    /**
+     * @description
+     * Enable/disable permessage-deflate.
+     */
+    perMessageDeflate?: boolean | { serverNoContextTakeover: boolean; } | null,
+    /**
+     * The URL path of the server where handshake requests are processed.
      * @default '/ziron'
      */
     path?: string;
     /**
-     * With this property, you can specify what origins are allowed to communicate to the server.
+     * With this property, you can specify what origins are allowed to connect to the server.
      * You can specify the port and hostname.
      * Also, a star can be used as a wild card for any port or any hostname.
      * @example

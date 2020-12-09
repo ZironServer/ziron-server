@@ -289,8 +289,8 @@ export default class Socket
         data = data || [];
         const channel = data[0];
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
-        if(this._server.clientPublishMiddleware) {
-            try {await this._server.clientPublishMiddleware(this,channel,data[1]);}
+        if(this._server.publishInMiddleware) {
+            try {await this._server.publishInMiddleware(this,channel,data[1]);}
             catch (err) {
                 if(!(err instanceof Block)) this._server._emit('error', err);
                 return end(4403);
@@ -305,8 +305,8 @@ export default class Socket
         data = data || [];
         const channel = data[0];
         if(typeof channel !== "string") return;
-        if(this._server.clientPublishMiddleware) {
-            try {await this._server.clientPublishMiddleware(this,channel,data[1]);}
+        if(this._server.publishInMiddleware) {
+            try {await this._server.publishInMiddleware(this,channel,data[1]);}
             catch (err) {
                 if(!(err instanceof Block)) this._server._emit('error', err);
                 return;

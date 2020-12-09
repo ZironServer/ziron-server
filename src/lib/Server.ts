@@ -32,7 +32,7 @@ type HandshakeMiddleware = (req: HTTP.IncomingMessage) => Promise<void> | void;
 type SocketMiddleware = (socket: Socket) => Promise<void> | void;
 type AuthenticateMiddleware = (socket: Socket, authToken: object, signedAuthToken: string) => Promise<void> | void;
 type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | void;
-type ClientPublishMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
+type PublishInMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 
 export default class Server {
@@ -44,8 +44,9 @@ export default class Server {
         state: null,
         maxPayload: null,
         perMessageDeflate: null,
+        socketChannelLimit: 1000,
         allowClientPublish: true,
-        ackTimeout: 10000,
+        ackTimeout: 7000,
         authTokenExpireCheckInterval: 12000,
         pingInterval: 8000,
         origins: null,
@@ -78,7 +79,7 @@ export default class Server {
     public socketMiddleware: SocketMiddleware | undefined;
     public authenticateMiddleware: AuthenticateMiddleware | undefined;
     public subscribeMiddleware: SubscribeMiddleware | undefined;
-    public clientPublishMiddleware: ClientPublishMiddleware | undefined;
+    public publishInMiddleware: PublishInMiddleware | undefined;
     public publishOutMiddleware: PublishOutMiddleware | undefined;
 
     /**
