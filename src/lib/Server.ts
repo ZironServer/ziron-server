@@ -99,6 +99,12 @@ export default class Server {
         this.internalBroker = new InternalBroker(this);
         this.internalBroker.externalBrokerClient = defaultExternalBrokerClient;
         this.exchange = this.internalBroker.exchange;
+
+        if(this._options.socketChannelLimit != null) {
+            const limit = this._options.socketChannelLimit;
+            this._checkSocketChLimitReached = (count) => count >= limit;
+        }
+        else this._checkSocketChLimitReached = () => false;
     }
 
     public listen: (port?: number, onListen?: () => void) => void = this._create.bind(this);
@@ -187,6 +193,13 @@ export default class Server {
         (this as Writable<Server>).clientCount--;
         delete this.clients[socket.id];
     }
+
+    /**
+     * @internal
+     * @param count
+     * @private
+     */
+    readonly _checkSocketChLimitReached: (count: number) => boolean;
 
     private _handleServerError(error: string | Error) {
         this._emit('error',typeof error === 'string' ? new ServerProtocolError(error) : error);

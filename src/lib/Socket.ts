@@ -16,7 +16,14 @@ import Server from "./Server";
 import {WebSocket} from "z-uws";
 import * as HTTP from "http";
 import {Writable} from "./Utils";
-import {BadConnectionType, Transport, DataType, InvokeListener, TransmitListener} from "ziron-engine";
+import {
+    BadConnectionType,
+    Transport,
+    DataType,
+    InvokeListener,
+    TransmitListener,
+    InvalidActionError
+} from "ziron-engine";
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "zation-core-events";
 import {SignOptions} from "jsonwebtoken";
 import {Block} from "./MiddlewareUtils";
@@ -251,6 +258,9 @@ export default class Socket
 
     private async _handleSubscribeInvoke(channel: any, end: (data?: any) => void, reject: (err?: any) => void) {
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
+        else if(this._server._checkSocketChLimitReached(this.subscriptions.length))
+            return reject(new InvalidActionError(`Socket ${this.id} tried to exceed the channel subscription limit of ${
+                this._server._options.socketChannelLimit}`));
         else {
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
