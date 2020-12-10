@@ -134,12 +134,16 @@ export default class Socket
         this.transmit = this._transport.transmit.bind(this._transport);
         this.invoke = this._transport.invoke.bind(this._transport);
         this.sendPreparedPackage = this._transport.sendPreparedPackage.bind(this._transport);
+        this.flushBuffer = this._transport.flushBuffer.bind(this._transport);
+        this.getBufferSize = this._transport.getBufferSize.bind(this._transport);
         socket.on('message',this._transport.emitMessage.bind(this._transport));
     }
 
     public readonly transmit: Transport['transmit'];
     public readonly invoke: Transport['invoke'];
     public readonly sendPreparedPackage: Transport['sendPreparedPackage'];
+    public readonly flushBuffer: Transport['flushBuffer'];
+    public readonly getBufferSize: Transport['getBufferSize'];
 
     private _sendRaw(data: string | Buffer | ArrayBuffer) {
         try {this._socket.send(data);}
@@ -247,6 +251,7 @@ export default class Socket
         this.onUnknownTransmit(event,data,type);
     }
 
+    // noinspection JSUnusedGlobalSymbols
     kickOut(channel: string, data?: any) {
         const index = this.subscriptions.indexOf(channel);
         if(index !== -1) {
