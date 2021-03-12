@@ -230,10 +230,10 @@ export default class Server {
                         next(true);
                     }
                     catch (err) {
-                        if(err instanceof Block) next(false, err.code, err.message || 'Action was blocked by handshake middleware');
+                        if(err instanceof Block) next(false, err.code, err.message || 'Handshake was blocked by handshake middleware');
                         else {
                             this._emit('error', err);
-                            next(false, err.code ?? 403, 'Action was blocked by handshake middleware');
+                            next(false, err.code ?? 403, 'Handshake was blocked by handshake middleware');
                         }
                     }
                 })();
