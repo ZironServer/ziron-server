@@ -29,6 +29,7 @@ type LocalEventEmitter = EventEmitter<{
 }>;
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage) => Promise<void> | void;
+type AttachmentMiddleware = (attachment: any) => Promise<void> | void;
 type SocketMiddleware = (socket: Socket) => Promise<void> | void;
 type AuthenticateMiddleware = (socket: Socket, authToken: object, signedAuthToken: string) => Promise<void> | void;
 type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | void;
@@ -76,6 +77,7 @@ export default class Server {
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
+    public attachmentMiddleware: AttachmentMiddleware | undefined;
     public socketMiddleware: SocketMiddleware | undefined;
     public authenticateMiddleware: AuthenticateMiddleware | undefined;
     public subscribeMiddleware: SubscribeMiddleware | undefined;
@@ -149,6 +151,19 @@ export default class Server {
                 }
             }
             catch (_) {}
+        }
+
+        if(this.attachmentMiddleware){
+            try {await this.attachmentMiddleware(attachment);}
+            catch (err) {
+                if(err instanceof Block)
+                    socket.close(err.code, err.message || 'Handshake was blocked by attachment middleware');
+                else {
+                    this._emit('error', err);
+                    socket.close(err.code ?? 4403,'Handshake was blocked by attachment middleware');
+                }
+                return;
+            }
         }
 
         const zSocket = new Socket(this,socket,req,attachment);
