@@ -73,7 +73,7 @@ export default class Server {
     public readonly clientCount: number = 0;
     public readonly clients: Record<string, Socket> = {};
 
-    public connectionHandler: (socket: Socket) => Promise<void> | void = () => {};
+    public connectionHandler: (socket: Socket) => Promise<any> | any = () => {};
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
@@ -190,8 +190,10 @@ export default class Server {
                 catch (err) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
             }
 
-            await this.connectionHandler(zSocket);
-            zSocket.transmit(InternalServerTransmits.ConnectionReady,[this._options.pingInterval,authTokenState]);
+            const readyData = await this.connectionHandler(zSocket);
+            const res = [this._options.pingInterval,authTokenState];
+            if(readyData !== undefined) res.push(readyData);
+            zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
         catch (err) {
             this._emit('error', err);
