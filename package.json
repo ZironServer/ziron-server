@@ -1,6 +1,6 @@
 {
   "name": "ziron-server",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Ziron server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "base64id": "2.0.0",
-    "emitix": "^1.1.2",
+    "emitix": "^1.1.5",
     "@types/jsonwebtoken": "8.3.8",
     "jsonwebtoken": "8.5.1",
     "z-uws": "^3.0.2",
