@@ -108,12 +108,12 @@ export default class Socket
 
     private readonly _transport: Transport;
 
-    constructor(server: Server, socket: WebSocket, upgradeRequest: HTTP.IncomingMessage, handshakeAttachment: any) {
+    constructor(server: Server, socket: WebSocket, upgradeRequest: HTTP.IncomingMessage) {
         this._server = server;
         this._socket = socket;
 
         this.request = upgradeRequest;
-        this.handshakeAttachment = handshakeAttachment;
+        this.handshakeAttachment = upgradeRequest.attachment;
 
         const addresses = this._socket._socket;
         this.remoteAddress = addresses.remoteAddress || null;

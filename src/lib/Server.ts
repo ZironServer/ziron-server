@@ -20,6 +20,10 @@ import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
 import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
 
+declare module "http" {
+    interface IncomingMessage {attachment?: any}
+}
+
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
     'warning': [Error],
@@ -28,7 +32,6 @@ type LocalEventEmitter = EventEmitter<{
 }>;
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage) => Promise<void> | void;
-type AttachmentMiddleware = (attachment: any) => Promise<void> | void;
 type SocketMiddleware = (socket: Socket) => Promise<void> | void;
 type AuthenticateMiddleware = (socket: Socket, authToken: object, signedAuthToken: string) => Promise<void> | void;
 type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | void;
@@ -77,7 +80,6 @@ export default class Server {
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
-    public attachmentMiddleware: AttachmentMiddleware | undefined;
     public socketMiddleware: SocketMiddleware | undefined;
     public authenticateMiddleware: AuthenticateMiddleware | undefined;
     public subscribeMiddleware: SubscribeMiddleware | undefined;
@@ -165,7 +167,6 @@ export default class Server {
     }
 
     private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {
-        const url = req.url || '';
         const protocolHeader = req.headers['sec-websocket-protocol'];
         const protocolValue = (Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader) || "";
 
@@ -174,31 +175,7 @@ export default class Server {
         if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
         const signedToken = protocolIndexOfAt !== -1 ? protocolValue.substring(0,protocolIndexOfAt) : null;
 
-        let attachment = undefined;
-        const urlIndexOfSearch = url.indexOf('?');
-        const queryArgs = urlIndexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
-        if(queryArgs.length){
-            try {
-                const parsedArgs = JSON.parse(queryArgs);
-                if(parsedArgs) attachment = parsedArgs;
-            }
-            catch (_) {}
-        }
-
-        if(this.attachmentMiddleware){
-            try {await this.attachmentMiddleware(attachment);}
-            catch (err) {
-                if(err instanceof Block)
-                    socket.close(err.code, err.message || 'Handshake was blocked by attachment middleware');
-                else {
-                    this._emit('error', err);
-                    socket.close(err.code ?? 4403,'Handshake was blocked by attachment middleware');
-                }
-                return;
-            }
-        }
-
-        const zSocket = new Socket(this,socket,req,attachment);
+        const zSocket = new Socket(this,socket,req);
         (this as Writable<Server>).clientCount++;
         this.clients[zSocket.id] = zSocket;
 
@@ -256,28 +233,39 @@ export default class Server {
 
     private _verifyClient(info: ConnectionInfo, next: VerifyClientNext) {
         if(this.refuseConnections) return next(false,403);
-        if(this.originsChecker(info.origin)) {
-            if(this.handshakeMiddleware){
-                (async () => {
-                    try {
-                        await this.handshakeMiddleware!(info.req);
-                        next(true);
-                    }
-                    catch (err) {
-                        if(err instanceof Block) next(false, err.code, err.message || 'Handshake was blocked by handshake middleware');
-                        else {
-                            this._emit('error', err);
-                            next(false, err.code ?? 403, 'Handshake was blocked by handshake middleware');
-                        }
-                    }
-                })();
-            }
-            else next(true);
-        }
-        else {
+        if(!this.originsChecker(info.origin)) {
             const err = new ServerProtocolError('Failed to authorize socket handshake - Invalid origin: ' + origin);
             this._emit('warning', err);
-            next(false, 403, err.message);
+            return next(false, 403, err.message);
         }
+
+        const req = info.req;
+        const url = req.url || '';
+        const urlIndexOfSearch = url.indexOf('?');
+        const queryArgs = urlIndexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
+        if(queryArgs.length){
+            try {
+                const parsedArgs = JSON.parse(decodeURIComponent(queryArgs));
+                if(parsedArgs) req.attachment = parsedArgs;
+            }
+            catch (_) {}
+        }
+
+        if(this.handshakeMiddleware){
+            (async () => {
+                try {
+                    await this.handshakeMiddleware!(req);
+                    next(true);
+                }
+                catch (err) {
+                    if(err instanceof Block) next(false, err.code, err.message || 'Handshake was blocked by handshake middleware');
+                    else {
+                        this._emit('error', err);
+                        next(false, err.code ?? 403, 'Handshake was blocked by handshake middleware');
+                    }
+                }
+            })();
+        }
+        else next(true);
     }
 }
