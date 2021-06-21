@@ -51,8 +51,6 @@ export default class Socket
 {
     public readonly id : string = base64.generateId();
 
-    public readonly userData: object = {};
-
     public readonly open: boolean = true;
 
     public readonly signedAuthToken: string | null = null;
