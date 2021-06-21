@@ -14,7 +14,6 @@ import * as HTTPS from "https";
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "zation-core-errors";
 import {Writable} from "./Utils";
-import {HandshakeUrlQuery} from "./HandshakeUrlQuery";
 import {InternalServerTransmits} from "zation-core-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
@@ -166,23 +165,22 @@ export default class Server {
     }
 
     private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {
-        let signedToken;
-        let attachment = undefined;
-
+        const url = req.url || '';
         const protocolHeader = req.headers['sec-websocket-protocol'];
         const protocolValue = (Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader) || "";
 
-        const indexOfQuery = protocolValue.indexOf('?');
-        const protocolName = indexOfQuery === -1 ? protocolValue : protocolValue.substring(0,indexOfQuery);
+        const protocolIndexOfAt = protocolValue.indexOf('@');
+        const protocolName = protocolIndexOfAt === -1 ? protocolValue : protocolValue.substring(protocolIndexOfAt + 1);
         if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
-        const protocolArgs = indexOfQuery !== -1 ? protocolValue.substring(protocolValue.indexOf('?') + 1) : '';
-        if(protocolArgs.length){
+        const signedToken = protocolIndexOfAt !== -1 ? protocolValue.substring(0,protocolIndexOfAt) : null;
+
+        let attachment = undefined;
+        const urlIndexOfSearch = url.indexOf('?');
+        const queryArgs = urlIndexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
+        if(queryArgs.length){
             try {
-                const parsedArgs = JSON.parse(protocolArgs);
-                if(parsedArgs) {
-                    attachment = (parsedArgs as HandshakeUrlQuery).a;
-                    signedToken = (parsedArgs as HandshakeUrlQuery).t;
-                }
+                const parsedArgs = JSON.parse(queryArgs);
+                if(parsedArgs) attachment = parsedArgs;
             }
             catch (_) {}
         }
