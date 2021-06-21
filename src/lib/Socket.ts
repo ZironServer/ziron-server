@@ -36,8 +36,8 @@ type LocalEventEmitter = EventEmitter<{
     'authTokenChange': [object | null,object | null]
 }>;
 
-type ReceiverListener = (data: any, type: DataType) => void | Promise<void>;
-type ProcedureListener = (data: any,end: (data?: any) => void,reject: (err?: any) => void, type: DataType) => void | Promise<void>
+export type ReceiverListener = (data: any, type: DataType) => void | Promise<void>;
+export type ProcedureListener = (data: any,end: (data?: any) => void,reject: (err?: any) => void, type: DataType) => void | Promise<void>
 
 type Receivers =
     { readonly [key in InternalServerReceivers]: ReceiverListener } &

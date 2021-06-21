@@ -6,7 +6,7 @@ Copyright(c) Luca Scaringella
 
 import Server                    from "./lib/Server";
 import ServerOptions             from "./lib/ServerOptions";
-import Socket                    from "./lib/Socket";
+import Socket, {ProcedureListener, ReceiverListener} from "./lib/Socket";
 import AuthEngine                from "./lib/AuthEngine";
 import Exchange                  from "./lib/Exchange";
 import {ExternalBrokerClient}    from "./lib/broker/ExternalBrokerClient";
@@ -26,5 +26,7 @@ export {
     ExternalBrokerClient,
     BackError,
     prepareMultiTransmit,
-    Block
+    Block,
+    ProcedureListener,
+    ReceiverListener
 }
