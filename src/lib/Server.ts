@@ -171,7 +171,7 @@ export default class Server {
 
         const protocolHeader = req.headers['sec-websocket-protocol'];
         const protocolValue = (Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader) || "";
-        
+
         const indexOfQuery = protocolValue.indexOf('?');
         const protocolName = indexOfQuery === -1 ? protocolValue : protocolValue.substring(0,indexOfQuery);
         if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
