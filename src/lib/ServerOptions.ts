@@ -9,7 +9,7 @@ import {AuthOptions} from "./AuthEngine";
 export default interface ServerOptions {
     /**
      * @description
-     * Specifies the join URL to the cluster.
+     * Specifies the join token to the cluster.
      * This is required if you want to run a cluster.
      */
     join?: string | null;
