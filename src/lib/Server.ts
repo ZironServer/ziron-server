@@ -169,15 +169,19 @@ export default class Server {
         let signedToken;
         let attachment = undefined;
 
-        const url = req.url || '';
-        const indexOfSearch = url.indexOf('?');
-        const query = indexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
-        if(query.length){
+        const protocolHeader = req.headers['sec-websocket-protocol'];
+        const protocolValue = (Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader) || "";
+        
+        const indexOfQuery = protocolValue.indexOf('?');
+        const protocolName = indexOfQuery === -1 ? protocolValue : protocolValue.substring(0,indexOfQuery);
+        if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
+        const protocolArgs = indexOfQuery !== -1 ? protocolValue.substring(protocolValue.indexOf('?') + 1) : '';
+        if(protocolArgs.length){
             try {
-                const args = JSON.parse(decodeURIComponent(query));
-                if(args) {
-                    attachment = (args as HandshakeUrlQuery).a;
-                    signedToken = (args as HandshakeUrlQuery).t;
+                const parsedArgs = JSON.parse(protocolArgs);
+                if(parsedArgs) {
+                    attachment = (parsedArgs as HandshakeUrlQuery).a;
+                    signedToken = (parsedArgs as HandshakeUrlQuery).t;
                 }
             }
             catch (_) {}
