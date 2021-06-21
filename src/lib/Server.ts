@@ -52,7 +52,8 @@ export default class Server {
         pingInterval: 8000,
         origins: null,
         path: '/ziron',
-        auth: {}
+        auth: {},
+        healthCheckEndpoint: true
     };
 
     public readonly originsChecker: OriginsChecker;
@@ -112,17 +113,44 @@ export default class Server {
     public listen: (port?: number, onListen?: () => void) => void = this._create.bind(this);
     public attach: (httpServer: HTTP.Server | HTTPS.Server) => void = this._create.bind(this);
 
+    private _createBasicHttpServer() {
+        const httpServer = HTTP.createServer((_: any, res: HTTP.ServerResponse): void => {
+            const body = HTTP.STATUS_CODES[426];
+            res.writeHead(426, {
+                'Content-Length': body?.length || 0,
+                'Content-Type': 'text/plain'
+            });
+            return res.end(body);
+        });
+        httpServer.on('error', (err: Error): void => {
+            this._emit("error",err);
+        });
+        return httpServer;
+    }
+
     private _create(port?: number, onListen?: () => void)
     private _create(httpServer: HTTP.Server | HTTPS.Server)
     private _create(http: HTTP.Server | HTTPS.Server | number = 3000, onListen?: () => void) {
         if(this._wsServer) throw new Error('The websocket server is already created.')
+
+        const httpServer = typeof http === 'number' ? this._createBasicHttpServer() : http;
+
+        if(this._options.healthCheckEndpoint) {
+            httpServer.on('request', function (req, res) {
+                if (req.url === '/healthCheck') {
+                    res.writeHead(200, {'Content-Type': 'text/html'});
+                    res.end('OK');
+                }
+            });
+        }
+
         this._wsServer = new WebSocketServer({
-            ...(typeof http === 'number' ? {port: http} : {server: http}),
+            server: httpServer,
             verifyClient: this._verifyClient.bind(this),
             path: this._options.path,
             ...(this._options.maxPayload != null ? {maxPayload: this._options.maxPayload} : {}),
             ...(this._options.perMessageDeflate != null ? {perMessageDeflate: this._options.perMessageDeflate} : {}),
-        },onListen);
+        });
 
         this._wsServer.startAutoPing(this._options.pingInterval,true);
         this._authTokenExpireCheckerTicker = setInterval(() => {
@@ -133,6 +161,8 @@ export default class Server {
 
         this._wsServer.on('error',this._handleServerError.bind(this));
         this._wsServer.on('connection',this._handleSocketConnection.bind(this));
+
+        if(typeof http === 'number') httpServer.listen(http,onListen);
     }
 
     private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {

@@ -90,5 +90,10 @@ export default interface ServerOptions {
      *
      * @default null (all allowed)
      */
-    origins?: string[] | string | null
+    origins?: string[] | string | null;
+    /**
+     * Specifies if the server should automatically provide a health check HTTP endpoint.
+     * @default true
+     */
+    healthCheckEndpoint?: boolean;
 }
