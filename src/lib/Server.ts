@@ -42,7 +42,7 @@ export default class Server {
      * @internal
      */
     readonly _options: Required<ServerOptions> = {
-        state: null,
+        join: null,
         maxPayload: null,
         perMessageDeflate: null,
         socketChannelLimit: 1000,

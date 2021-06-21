@@ -9,10 +9,10 @@ import {AuthOptions} from "./AuthEngine";
 export default interface ServerOptions {
     /**
      * @description
-     * Specifies the join URL to the state server.
+     * Specifies the join URL to the cluster.
      * This is required if you want to run a cluster.
      */
-    state?: string | null;
+    join?: string | null;
     /**
      * @description
      * Specifies the auth options that are used to sign and verify JSON web tokens.
