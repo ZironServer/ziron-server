@@ -31,7 +31,7 @@ type LocalEventEmitter = EventEmitter<{
     'disconnection': [Socket,number,any]
 }>;
 
-type HandshakeMiddleware = (req: HTTP.IncomingMessage) => Promise<void> | void;
+type HandshakeMiddleware = (req: HTTP.IncomingMessage & {attachment?: any}) => Promise<void> | void;
 type SocketMiddleware = (socket: Socket) => Promise<void> | void;
 type AuthenticateMiddleware = (socket: Socket, authToken: object, signedAuthToken: string) => Promise<void> | void;
 type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | void;
