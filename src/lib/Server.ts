@@ -19,6 +19,7 @@ import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
 import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
+import * as uniqId from "uniqid";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -44,6 +45,7 @@ export default class Server {
      * @internal
      */
     readonly _options: Required<ServerOptions> = {
+        id: uniqId(),
         join: null,
         maxPayload: null,
         perMessageDeflate: null,
@@ -60,6 +62,10 @@ export default class Server {
 
     public readonly originsChecker: OriginsChecker;
     public readonly auth: AuthEngine;
+
+    get id(): string {
+        return this._options.id;
+    }
 
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
     private _wsServer: WebSocketServer;
