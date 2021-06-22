@@ -117,7 +117,7 @@ export default class Server {
         else this._checkSocketChLimitReached = () => false;
     }
 
-    public listen: (port?: number, onListen?: () => void) => void = this._create.bind(this);
+    public listen: (port?: number) => Promise<void> = this._create.bind(this);
     public attach: (httpServer: HTTP.Server | HTTPS.Server) => void = this._create.bind(this);
 
     private _createBasicHttpServer() {
@@ -135,9 +135,9 @@ export default class Server {
         return httpServer;
     }
 
-    private _create(port?: number, onListen?: () => void)
-    private _create(httpServer: HTTP.Server | HTTPS.Server)
-    private _create(http: HTTP.Server | HTTPS.Server | number = 3000, onListen?: () => void) {
+    private _create(port?: number): Promise<void>
+    private _create(httpServer: HTTP.Server | HTTPS.Server): void
+    private _create(http: HTTP.Server | HTTPS.Server | number = 3000): Promise<void> | void {
         if(this._wsServer) throw new Error('The websocket server is already created.')
 
         const httpServer = typeof http === 'number' ? this._createBasicHttpServer() : http;
@@ -169,7 +169,9 @@ export default class Server {
         this._wsServer.on('error',this._handleServerError.bind(this));
         this._wsServer.on('connection',this._handleSocketConnection.bind(this));
 
-        if(typeof http === 'number') httpServer.listen(http,onListen);
+        if(typeof http === 'number') return new Promise(res => {
+            httpServer.listen(http,() => res());
+        });
     }
 
     private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {
