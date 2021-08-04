@@ -71,7 +71,7 @@ export default interface ServerOptions {
     perMessageDeflate?: boolean | { serverNoContextTakeover: boolean; } | null,
     /**
      * The URL path of the server where handshake requests are processed.
-     * @default '/ziron'
+     * @default '/'
      */
     path?: string;
     /**
