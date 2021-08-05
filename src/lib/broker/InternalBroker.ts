@@ -6,7 +6,7 @@ Copyright(c) Luca Scaringella
 
 import Socket from "../Socket";
 import {Transport, DataType} from "ziron-engine";
-import {InternalServerTransmits} from "zation-core-events";
+import {InternalServerTransmits} from "ziron-events";
 import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBrokerClient";
 import Exchange from "../Exchange";
 import Server from "../Server";

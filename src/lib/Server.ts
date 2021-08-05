@@ -12,9 +12,9 @@ import {ConnectionInfo, VerifyClientNext, WebSocketServer, WebSocket} from 'z-uw
 import * as HTTP from "http";
 import * as HTTPS from "https";
 import EventEmitter from "emitix";
-import {ServerProtocolError} from "zation-core-errors";
+import {ServerProtocolError} from "ziron-errors";
 import {Writable} from "./Utils";
-import {InternalServerTransmits} from "zation-core-events";
+import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";

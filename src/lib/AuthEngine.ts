@@ -11,7 +11,7 @@ import {
     AuthTokenNotBeforeError,
     InvalidArgumentsError,
     InvalidOptionsError
-} from "zation-core-errors";
+} from "ziron-errors";
 import {Algorithm, sign, SignOptions, TokenExpiredError, verify, VerifyOptions, NotBeforeError} from 'jsonwebtoken';
 import crypto = require('crypto');
 

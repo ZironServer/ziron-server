@@ -11,7 +11,7 @@ import {
     SocketProtocolError,
     socketProtocolErrorStatuses,
     socketProtocolIgnoreStatuses,
-} from "zation-core-errors";
+} from "ziron-errors";
 import Server from "./Server";
 import {WebSocket} from "z-uws";
 import * as HTTP from "http";
@@ -24,7 +24,7 @@ import {
     TransmitListener,
     InvalidActionError
 } from "ziron-engine";
-import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "zation-core-events";
+import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "ziron-events";
 import {SignOptions} from "jsonwebtoken";
 import {Block} from "./MiddlewareUtils";
 import {NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
