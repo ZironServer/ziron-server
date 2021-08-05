@@ -5,6 +5,8 @@ Copyright(c) Luca Scaringella
  */
 
 import {AuthOptions} from "./AuthEngine";
+import * as HTTP from "http";
+import * as HTTPS from "https";
 
 export default interface ServerOptions {
     /**
@@ -70,6 +72,11 @@ export default interface ServerOptions {
      */
     perMessageDeflate?: boolean | { serverNoContextTakeover: boolean; } | null,
     /**
+     * The port where the server is listening.
+     * @default 3000
+     */
+    port?: number;
+    /**
      * The URL path of the server where handshake requests are processed.
      * @default '/'
      */
@@ -104,4 +111,11 @@ export default interface ServerOptions {
      * @default true
      */
     healthCheckEndpoint?: boolean;
+    /**
+     * Defines an already existing HTTP server that should be used.
+     * Notice that an error will be thrown when the provided server is already
+     * listening to a different port than defined in the server options.
+     * If no server is provided, a new one will be created.
+     */
+    httpServer?: HTTP.Server | HTTPS.Server | null;
 }

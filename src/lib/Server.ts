@@ -55,9 +55,11 @@ export default class Server {
         authTokenExpireCheckInterval: 12000,
         pingInterval: 8000,
         origins: null,
+        port: 3000,
         path: '/',
         auth: {},
-        healthCheckEndpoint: true
+        healthCheckEndpoint: true,
+        httpServer: null
     };
 
     public readonly originsChecker: OriginsChecker;
@@ -67,8 +69,17 @@ export default class Server {
         return this._options.id;
     }
 
+    get port(): number {
+        return this._options.port;
+    }
+
+    get path(): string {
+        return this._options.path;
+    }
+
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
-    private _wsServer: WebSocketServer;
+    private readonly _httpServer: HTTP.Server | HTTPS.Server;
+    private readonly _wsServer: WebSocketServer;
 
     private _localEmitter: LocalEventEmitter = new EventEmitter();
     public readonly once: LocalEventEmitter['once'] = this._localEmitter.once.bind(this._localEmitter);
@@ -103,6 +114,9 @@ export default class Server {
     constructor(options: ServerOptions = {}) {
         Object.assign(this._options,options);
 
+        this._options.path = this._options.path === "" || this._options.path === "/" ? "" :
+            !this._options.path.startsWith("/") ? "/" + this._options.path : this._options.path;
+
         this.auth = new AuthEngine(this._options.auth);
         this.originsChecker = createOriginsChecker(this._options.origins);
 
@@ -110,6 +124,19 @@ export default class Server {
         this.internalBroker.externalBrokerClient = defaultExternalBrokerClient;
         this.exchange = this.internalBroker.exchange;
 
+        this._setUpSocketChLimit();
+        if(this._options.httpServer) {
+            this._checkHttpServerPort();
+            this._httpServer = this._options.httpServer;
+        }
+        else this._httpServer = this._createBasicHttpServer();
+
+        if(this._options.healthCheckEndpoint) this._initHealthCheck();
+        this._wsServer = this._setUpWsServer();
+
+    }
+
+    private _setUpSocketChLimit() {
         if(this._options.socketChannelLimit != null) {
             const limit = this._options.socketChannelLimit;
             this._checkSocketChLimitReached = (count) => count >= limit;
@@ -117,8 +144,33 @@ export default class Server {
         else this._checkSocketChLimitReached = () => false;
     }
 
-    public listen: (port?: number) => Promise<void> = this._create.bind(this);
-    public attach: (httpServer: HTTP.Server | HTTPS.Server) => void = this._create.bind(this);
+    private _setUpWsServer() {
+        const wsServer = new WebSocketServer({
+            server: this._httpServer,
+            verifyClient: this._verifyClient.bind(this),
+            path: this._options.path,
+            ...(this._options.maxPayload != null ? {maxPayload: this._options.maxPayload} : {}),
+            ...(this._options.perMessageDeflate != null ? {perMessageDeflate: this._options.perMessageDeflate} : {}),
+        });
+        wsServer.startAutoPing(this._options.pingInterval,true);
+        this._authTokenExpireCheckerTicker = setInterval(() => {
+            for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
+                this.clients[id]._checkAuthTokenExpire();
+            }
+        },this._options.authTokenExpireCheckInterval);
+        wsServer.on('error',this._handleServerError.bind(this));
+        wsServer.on('connection',this._handleSocketConnection.bind(this));
+        return wsServer;
+    }
+
+    private _initHealthCheck() {
+        this._httpServer.on('request', function (req, res) {
+            if (req.url === '/healthCheck') {
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.end('OK');
+            }
+        });
+    }
 
     private _createBasicHttpServer() {
         const httpServer = HTTP.createServer((_: any, res: HTTP.ServerResponse): void => {
@@ -135,42 +187,18 @@ export default class Server {
         return httpServer;
     }
 
-    private _create(port?: number): Promise<void>
-    private _create(httpServer: HTTP.Server | HTTPS.Server): void
-    private _create(http: HTTP.Server | HTTPS.Server | number = 3000): Promise<void> | void {
-        if(this._wsServer) throw new Error('The websocket server is already created.')
-
-        const httpServer = typeof http === 'number' ? this._createBasicHttpServer() : http;
-
-        if(this._options.healthCheckEndpoint) {
-            httpServer.on('request', function (req, res) {
-                if (req.url === '/healthCheck') {
-                    res.writeHead(200, {'Content-Type': 'text/html'});
-                    res.end('OK');
-                }
-            });
+    private _checkHttpServerPort() {
+        if(this._httpServer.listening) {
+            const addressInfo = this._httpServer.address();
+            if(typeof addressInfo !== 'object' || addressInfo?.port !== this._options.port)
+                throw new Error('The provided HTTP server is already listening to a different port than defined in the server options.')
         }
+    }
 
-        this._wsServer = new WebSocketServer({
-            server: httpServer,
-            verifyClient: this._verifyClient.bind(this),
-            path: this._options.path,
-            ...(this._options.maxPayload != null ? {maxPayload: this._options.maxPayload} : {}),
-            ...(this._options.perMessageDeflate != null ? {perMessageDeflate: this._options.perMessageDeflate} : {}),
-        });
-
-        this._wsServer.startAutoPing(this._options.pingInterval,true);
-        this._authTokenExpireCheckerTicker = setInterval(() => {
-            for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
-                this.clients[id]._checkAuthTokenExpire();
-            }
-        },this._options.authTokenExpireCheckInterval);
-
-        this._wsServer.on('error',this._handleServerError.bind(this));
-        this._wsServer.on('connection',this._handleSocketConnection.bind(this));
-
-        if(typeof http === 'number') return new Promise(res => {
-            httpServer.listen(http,() => res());
+    public async listen(): Promise<void> {
+        this._checkHttpServerPort();
+        if(!this._httpServer.listening) return new Promise(res => {
+            this._httpServer.listen(this._options.port,() => res());
         });
     }
 
@@ -233,7 +261,7 @@ export default class Server {
      * @param count
      * @private
      */
-    readonly _checkSocketChLimitReached: (count: number) => boolean;
+    _checkSocketChLimitReached: (count: number) => boolean;
 
     private _handleServerError(error: string | Error) {
         this._emit('error',typeof error === 'string' ? new ServerProtocolError(error) : error);
