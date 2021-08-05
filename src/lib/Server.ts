@@ -20,6 +20,7 @@ import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
 import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
 import * as uniqId from "uniqid";
+import StateClient from "./StateClient";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -59,9 +60,13 @@ export default class Server {
         path: '/',
         auth: {},
         healthCheckEndpoint: true,
+        clusterJoinPayload: {},
+        clusterShared: {},
         httpServer: null
     };
 
+    public readonly stateClientConnection?: Promise<void>;
+    public readonly stateClient?: StateClient;
     public readonly originsChecker: OriginsChecker;
     public readonly auth: AuthEngine;
 
@@ -75,6 +80,10 @@ export default class Server {
 
     get path(): string {
         return this._options.path;
+    }
+
+    get leader(): boolean {
+        return this.stateClient?.leader ?? false;
     }
 
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
@@ -117,6 +126,8 @@ export default class Server {
         this._options.path = this._options.path === "" || this._options.path === "/" ? "" :
             !this._options.path.startsWith("/") ? "/" + this._options.path : this._options.path;
 
+        this.stateClient = this._setUpStateClient();
+        if(this.stateClient) this.stateClientConnection = this.stateClient.connect();
         this.auth = new AuthEngine(this._options.auth);
         this.originsChecker = createOriginsChecker(this._options.origins);
 
@@ -134,6 +145,18 @@ export default class Server {
         if(this._options.healthCheckEndpoint) this._initHealthCheck();
         this._wsServer = this._setUpWsServer();
 
+    }
+
+    private _setUpStateClient() {
+        if(this._options.join == null) return undefined;
+        return new StateClient({
+            id: this._options.id,
+            port: this._options.port,
+            path: this._options.path,
+            join: this._options.join,
+            joinPayload: this._options.clusterJoinPayload,
+            sharedData: this._options.clusterShared
+        });
     }
 
     private _setUpSocketChLimit() {
