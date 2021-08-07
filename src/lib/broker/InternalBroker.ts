@@ -11,10 +11,12 @@ import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBroke
 import Exchange from "../Exchange";
 import Server from "../Server";
 import {Block} from "../MiddlewareUtils";
+import {distinctArrayFilter} from "../Utils";
 
 export default class InternalBroker {
 
-    public externalBrokerClient: ExternalBrokerClient = defaultExternalBrokerClient;
+    externalBrokerClient: ExternalBrokerClient = defaultExternalBrokerClient;
+
     public readonly exchange: Exchange;
 
     private readonly channels: Record<string,Socket[]> = {};
@@ -32,10 +34,14 @@ export default class InternalBroker {
             unsubscribe: this._exchangeUnsubscribe.bind(this),
             publish: this.publish.bind(this)
         });
+    }
 
-        this.externalBrokerClient.onPublish = (channel, data, dataType) => {
-            this._processPublish(channel,data,dataType !== DataType.JSON,true);
-        }
+    getSubscriptionList(): string[] {
+        return [...this.exchangeChannels,...Object.keys(this.channels)].filter(distinctArrayFilter);
+    }
+
+    processExternalPublish(channel: string, data: any, dataType: DataType) {
+        this._processPublish(channel,data,dataType !== DataType.JSON,true);
     }
 
     private _exchangeSubscribe(channel: string) {
