@@ -50,4 +50,5 @@ export function hashToIndex(key: string, size: number) {
     return Math.abs(hash) % size;
 }
 
+export const distinctArrayFilter = <T>(v: T, i: number, a: T[]) => a.indexOf(v) === i;
 }
