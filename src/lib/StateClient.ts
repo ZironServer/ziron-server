@@ -8,6 +8,7 @@ import {Socket} from "ziron-client";
 import EventEmitter from "emitix";
 import { address } from "ip";
 import {arrayContentEquals, deepEqual, Writable} from "./Utils";
+import {CLUSTER_VERSION} from "./ClusterVersion";
 
 type LocalEventEmitter = EventEmitter<{
     'leadershipChange': [boolean],
@@ -30,8 +31,6 @@ type JoinResponse = {
     brokers: BrokerUpdate,
     leader: boolean
 }
-
-const CLUSTER_VERSION = 1;
 
 export default class StateClient {
 
