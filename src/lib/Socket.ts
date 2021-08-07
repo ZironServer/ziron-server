@@ -311,7 +311,7 @@ export default class Socket
                 return end(4403);
             }
         }
-        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON);
+        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
         end();
     }
 
@@ -327,6 +327,6 @@ export default class Socket
                 return;
             }
         }
-        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON);
+        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
     }
 }

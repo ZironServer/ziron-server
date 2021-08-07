@@ -5,6 +5,7 @@ Copyright(c) Luca Scaringella
  */
 
 import EventEmitter from "emitix";
+import Socket from "./Socket";
 
 type PublishEmitter = EventEmitter<{[key: string]: [any,boolean]}>;
 
@@ -13,7 +14,7 @@ export default class Exchange {
     public readonly subscriptions: ReadonlyArray<string>;
     public subscribe: (channel: string) => void;
     public unsubscribe: (channel: string) => void;
-    public publish: (channel: string, data: any, processComplexTypes?: boolean) => void;
+    public publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
 
     private readonly _publishEmitter: PublishEmitter = new EventEmitter();
     public readonly oncePublish: PublishEmitter['once'] = this._publishEmitter.once.bind(this._publishEmitter);
@@ -29,7 +30,7 @@ export default class Exchange {
         subscriptions: string[],
         subscribe: (channel: string) => void,
         unsubscribe: (channel: string) => void,
-        publish: (channel: string, data: any, processComplexTypes?: boolean) => void;
+        publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
     }) {
         this.subscriptions = connector.subscriptions;
         this.subscribe = connector.subscribe;

@@ -53,6 +53,7 @@ export default class Server {
         perMessageDeflate: null,
         socketChannelLimit: 1000,
         allowClientPublish: true,
+        publishToPublisher: true,
         ackTimeout: 7000,
         authTokenExpireCheckInterval: 12000,
         pingInterval: 8000,

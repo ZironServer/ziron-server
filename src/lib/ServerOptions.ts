@@ -36,6 +36,16 @@ export default interface ServerOptions {
     allowClientPublish?: boolean,
     /**
      * @description
+     * Defines if the publisher in a channel should get its own publish.
+     * The publisher is automatically determined if a client publishes,
+     * but the publisher needs to be specified when using the exchange instance.
+     * When the publisher is not specified, the published data will be
+     * sent to all subscribers (also the publisher if the publisher is a subscriber).
+     * @default true
+     */
+    publishToPublisher?: boolean,
+    /**
+     * @description
      * Specifies the limit of channels a socket can subscribe.
      * Null means unlimited.
      * @default 1000

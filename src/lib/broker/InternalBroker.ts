@@ -21,9 +21,11 @@ export default class InternalBroker {
     private readonly exchangeChannels: string[] = [];
 
     private readonly _server: Server;
+    private readonly _publishToPublisher: boolean;
 
     constructor(server: Server) {
         this._server = server;
+        this._publishToPublisher = server._options.publishToPublisher;
         this.exchange = new Exchange({
             subscriptions: this.exchangeChannels,
             subscribe: this._exchangeSubscribe.bind(this),
@@ -78,12 +80,13 @@ export default class InternalBroker {
         }
     }
 
-    publish(channel: string, data: any, processComplexTypes: boolean = false) {
+    publish(channel: string, data: any, processComplexTypes: boolean = false, publisher?: Socket) {
         this.externalBrokerClient.publish(channel,data,processComplexTypes);
-        this._processPublish(channel,data,processComplexTypes,false);
+        this._processPublish(channel,data,processComplexTypes,false,
+            this._publishToPublisher ? publisher : undefined);
     }
 
-    _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean) {
+    _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, skipSocket?: Socket) {
         if(this.exchangeChannels.includes(channel)) this.exchange._emitPublish(channel,data,external);
         const sockets = this.channels[channel];
         if(sockets) {
@@ -91,11 +94,19 @@ export default class InternalBroker {
                 (InternalServerTransmits.Publish,[channel,data],{processComplexTypes});
             if(!this._server.publishOutMiddleware) {
                 const len = sockets.length;
-                for(let i = 0; i < len; i++) sockets[i].sendPreparedPackage(preparedPackage);
+                // optimization tweak
+                if(skipSocket) {
+                    for(let i = 0; i < len; i++) {
+                        if(sockets[i] === skipSocket) continue;
+                        sockets[i].sendPreparedPackage(preparedPackage);
+                    }
+                }
+                else for(let i = 0; i < len; i++) sockets[i].sendPreparedPackage(preparedPackage);
             }
             else {
                 const middleware = this._server.publishOutMiddleware;
                 sockets.forEach(async (socket) => {
+                    if(socket === skipSocket) return;
                     try {
                         await middleware(socket,channel,data);
                         socket.sendPreparedPackage(preparedPackage);
