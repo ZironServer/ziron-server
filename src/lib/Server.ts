@@ -21,6 +21,7 @@ import InternalBroker from "./broker/InternalBroker";
 import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
 import * as uniqId from "uniqid";
 import StateClient from "./StateClient";
+import {EMPTY_FUNCTION} from "./Constants";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -103,7 +104,7 @@ export default class Server {
     public readonly clientCount: number = 0;
     public readonly clients: Record<string, Socket> = {};
 
-    public connectionHandler: (socket: Socket) => Promise<any> | any = () => {};
+    public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
