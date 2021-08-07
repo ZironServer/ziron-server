@@ -53,34 +53,21 @@ export default class StateClient {
 
     private _joinData: {shared: object, payload: object};
 
-    private readonly _joinSecret: string;
-    private readonly _joinUri: string;
-
     constructor(options: {
-        join: string,
+        joinTokenUri: string,
+        joinTokenSecret: string,
         sharedData: Record<any, any>,
         joinPayload: Record<any, any>,
         id: string,
         path: string,
         port: number
     }) {
-
-        const joinToken = options.join || "";
-        const joinTokenIndexOfAt = joinToken.indexOf("@");
-        if (joinTokenIndexOfAt === -1) {
-            this._joinSecret = "";
-            this._joinUri = joinToken;
-        } else {
-            this._joinSecret = joinToken.substring(0, joinTokenIndexOfAt);
-            this._joinUri = joinToken.substring(joinTokenIndexOfAt + 1);
-        }
-
         this._joinData = {
             shared: options.sharedData,
             payload: options.joinPayload
         };
 
-        const stateSocket = new Socket(this._joinUri, {
+        const stateSocket = new Socket(options.joinTokenUri, {
             ackTimeout: 3000,
             connectTimeout: 3000,
             autoReconnect: {
@@ -91,7 +78,7 @@ export default class StateClient {
                 maxDelay: 2000,
             },
             handshakeAttachment: {
-                secret: this._joinSecret,
+                secret: options.joinTokenSecret,
                 clusterVersion: CLUSTER_VERSION,
                 node: {
                     id: options.id,

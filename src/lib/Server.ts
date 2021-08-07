@@ -13,7 +13,7 @@ import * as HTTP from "http";
 import * as HTTPS from "https";
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
-import {Writable} from "./Utils";
+import {parseJoinToken, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
@@ -65,6 +65,7 @@ export default class Server {
         httpServer: null
     };
 
+    private readonly _joinToken: {secret: string, uri: string};
     public readonly stateClientConnection?: Promise<void>;
     public readonly stateClient?: StateClient;
     public readonly originsChecker: OriginsChecker;
@@ -126,6 +127,8 @@ export default class Server {
         this._options.path = this._options.path === "" || this._options.path === "/" ? "" :
             !this._options.path.startsWith("/") ? "/" + this._options.path : this._options.path;
 
+        this._joinToken = parseJoinToken(this._options.join || '');
+
         this.stateClient = this._setUpStateClient();
         if(this.stateClient) this.stateClientConnection = this.stateClient.connect();
         this.auth = new AuthEngine(this._options.auth);
@@ -153,7 +156,8 @@ export default class Server {
             id: this._options.id,
             port: this._options.port,
             path: this._options.path,
-            join: this._options.join,
+            joinTokenUri: this._joinToken.uri,
+            joinTokenSecret: this._joinToken.secret,
             joinPayload: this._options.clusterJoinPayload,
             sharedData: this._options.clusterShared
         });
