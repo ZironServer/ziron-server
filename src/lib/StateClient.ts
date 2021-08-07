@@ -82,7 +82,7 @@ export default class StateClient {
                 clusterVersion: CLUSTER_VERSION,
                 node: {
                     id: options.id,
-                    type: 1,
+                    type: 0,
                     ip: address(),
                     port: options.port,
                     path: options.path,
