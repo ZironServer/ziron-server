@@ -5,6 +5,7 @@ Copyright(c) Luca Scaringella
  */
 
 import {DataType} from "ziron-engine";
+import {EMPTY_FUNCTION} from "../Constants";
 
 export interface ExternalBrokerClient {
     subscribe(channel: string),
@@ -14,8 +15,7 @@ export interface ExternalBrokerClient {
 }
 
 export const defaultExternalBrokerClient: ExternalBrokerClient = {
-    onPublish: () => {},
-    publish: () => {},
-    subscribe: () => {},
-    unsubscribe: () => {}
+    publish: EMPTY_FUNCTION,
+    subscribe: EMPTY_FUNCTION,
+    unsubscribe: EMPTY_FUNCTION
 };

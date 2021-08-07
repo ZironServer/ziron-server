@@ -27,7 +27,7 @@ import {
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "ziron-events";
 import {SignOptions} from "jsonwebtoken";
 import {Block} from "./MiddlewareUtils";
-import {NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
+import {EMPTY_FUNCTION, NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -81,7 +81,7 @@ export default class Socket
      * Will be called whenever no corresponding Procedure was found.
      * Can be overridden.
      */
-    public onUnknownInvoke: InvokeListener = () => {};
+    public onUnknownInvoke: InvokeListener = EMPTY_FUNCTION;
 
     public readonly receivers: Receivers = {
         [InternalServerReceivers.Deauthenticate]: this._deauthenticate.bind(this),
@@ -93,7 +93,7 @@ export default class Socket
      * Will be called whenever no corresponding Receiver was found.
      * Can be overridden.
      */
-    public onUnknownTransmit: TransmitListener = () => {};
+    public onUnknownTransmit: TransmitListener = EMPTY_FUNCTION;
 
     private readonly _server: Server;
     private readonly _socket: WebSocket;
