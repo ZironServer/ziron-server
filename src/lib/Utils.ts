@@ -39,3 +39,15 @@ export function deepEqual(v1 : any, v2 : any) : boolean {
     }
     return false;
 }
+
+export function hashToIndex(key: string, size: number) {
+    let hash = 0, chr, i;
+    for (i = 0; i < key.length; i++) {
+        chr = key.charCodeAt(i);
+        hash = ((hash << 5) - hash) + chr;
+        hash = hash & hash;
+    }
+    return Math.abs(hash) % size;
+}
+
+}
