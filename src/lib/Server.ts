@@ -18,9 +18,9 @@ import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
-import {defaultExternalBrokerClient} from "./broker/ExternalBrokerClient";
 import * as uniqId from "uniqid";
 import StateClient from "./StateClient";
+import BrokerClusterClient from "./broker/brokerClusterClient/BrokerClusterClient";
 import {EMPTY_FUNCTION} from "./Constants";
 
 declare module "http" {
@@ -64,7 +64,8 @@ export default class Server {
         healthCheckEndpoint: true,
         clusterJoinPayload: {},
         clusterShared: {},
-        httpServer: null
+        httpServer: null,
+        brokerClusterClientMaxPoolSize: 12
     };
 
     private readonly _joinToken: {secret: string, uri: string};
@@ -132,12 +133,17 @@ export default class Server {
         this._joinToken = parseJoinToken(this._options.join || '');
 
         this.stateClient = this._setUpStateClient();
-        if(this.stateClient) this.stateClientConnection = this.stateClient.connect();
+        if(this.stateClient != null) this.stateClientConnection = this.stateClient.connect();
         this.auth = new AuthEngine(this._options.auth);
         this.originsChecker = createOriginsChecker(this._options.origins);
 
         this.internalBroker = new InternalBroker(this);
-        this.internalBroker.externalBrokerClient = defaultExternalBrokerClient;
+        if(this.stateClient != null) {
+            this.internalBroker.externalBrokerClient = new BrokerClusterClient(this.stateClient,this.internalBroker,{
+                joinTokenSecret: this._joinToken.secret,
+                maxClientPoolSize: this._options.brokerClusterClientMaxPoolSize
+            });
+        }
         this.exchange = this.internalBroker.exchange;
 
         this._setUpSocketChLimit();

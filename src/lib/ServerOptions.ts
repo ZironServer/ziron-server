@@ -140,4 +140,10 @@ export default interface ServerOptions {
      * If no server is provided, a new one will be created.
      */
     httpServer?: HTTP.Server | HTTPS.Server | null;
+    /**
+     * Defines the max size of clients to a broker instance.
+     * The concrete max size is determined with the count of broker instances.
+     * @default 12
+     */
+    brokerClusterClientMaxPoolSize?: number;
 }
