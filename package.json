@@ -24,10 +24,10 @@
     "@types/jsonwebtoken": "8.3.8",
     "jsonwebtoken": "8.5.1",
     "z-uws": "^3.0.2",
-    "ziron-errors": "^1.2.2",
+    "ziron-errors": "^1.2.4",
     "ziron-events": "^1.0.3",
     "ziron-engine": "0.3.6",
-    "ziron-client": "^0.0.5",
+    "ziron-client": "^0.0.12",
     "uuid": "3.4.0",
     "@types/node": "^13.7.6",
     "ip": "^1.1.5"
