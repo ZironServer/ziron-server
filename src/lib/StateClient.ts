@@ -112,6 +112,7 @@ export default class StateClient {
                 this._updateClusterSessionId(joinResponse.session.id);
                 this._updateClusterSessionPayload(joinResponse.session.shared);
             } catch (e) {
+                if(!stateSocket.isConnected()) return;
                 invokeJoinRetryTicker = setTimeout(invokeJoin, 2000);
             }
         };
