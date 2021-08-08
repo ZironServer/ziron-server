@@ -175,27 +175,36 @@ export default class BrokerClusterClient implements ExternalBrokerClient {
      * The getting of the client pool and the action execution can not occur asynchronously.
      * Otherwise, the client pool may be disconnected when using it.
      */
-    publish(channel: string, data: any, processComplexTypes: boolean) {
+    publish(channel: string, data: any, processComplexTypes: boolean): void {
         let clientPool = this._selectClientPoolFromChannel(channel);
-        if(clientPool) return clientPool.publish(channel,data,processComplexTypes);
+        if(clientPool) {
+            clientPool.publish(channel,data,processComplexTypes);
+            return;
+        }
         this._tryWaitForClientPoolsUpdate().then(() => {
             clientPool = this._selectClientPoolFromChannel(channel);
             if(clientPool) return clientPool.publish(channel,data,processComplexTypes);
             this._emit("error",new NoMatchingBrokerClientError(channel));
         })
     }
-    subscribe(channel: string) {
+    subscribe(channel: string): void {
         let clientPool = this._selectClientPoolFromChannel(channel);
-        if(clientPool) return clientPool.subscribe(channel);
+        if(clientPool) {
+            clientPool.subscribe(channel);
+            return;
+        }
         this._tryWaitForClientPoolsUpdate().then(() => {
             clientPool = this._selectClientPoolFromChannel(channel);
             if(clientPool) return clientPool.subscribe(channel);
             this._emit("error",new NoMatchingBrokerClientError(channel));
         })
     }
-    unsubscribe(channel: string) {
+    unsubscribe(channel: string): void {
         let clientPool = this._selectClientPoolFromChannel(channel);
-        if(clientPool) return clientPool.unsubscribe(channel);
+        if(clientPool) {
+            clientPool.unsubscribe(channel);
+            return;
+        }
         this._tryWaitForClientPoolsUpdate().then(() => {
             clientPool = this._selectClientPoolFromChannel(channel);
             if(clientPool) return clientPool.unsubscribe(channel);

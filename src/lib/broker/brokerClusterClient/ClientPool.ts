@@ -54,10 +54,6 @@ export default class ClientPool {
         this.onError(new NamedError("PoolClientError", error.stack));
     }
 
-    private _handleClientSubscribeFail = (err: any) => {
-        this.onError(new NamedError("PoolClientSubscribeFail", err));
-    }
-
     private _handleClientPublish = (channel: string, data: any, dataType: DataType) => {
         this.onPublish(channel,data,dataType);
     }
@@ -83,16 +79,18 @@ export default class ClientPool {
     }
 
     async subscribe(channel: string): Promise<void> {
-        try {return this._selectClient(channel).subscribe(channel);}
-        catch (err) {this._handleClientSubscribeFail(err);}
+        try {await this._selectClient(channel).subscribe(channel);}
+        catch (err) {this.onError(new NamedError("PoolClientSubscribeFail", err));}
     }
 
-    unsubscribe(channel: string): Promise<void> {
-        return this._selectClient(channel).unsubscribe(channel);
+    async unsubscribe(channel: string): Promise<void> {
+        try {return this._selectClient(channel).unsubscribe(channel);}
+        catch (err) {this.onError(new NamedError("PoolClientUnsubscribeFail", err));}
     }
 
-    publish(channel: string, data: any, processComplexTypes: boolean) {
-        this._selectClient(channel).publish(channel,data,{processComplexTypes});
+    async publish(channel: string, data: any, processComplexTypes: boolean) {
+        try {await this._selectClient(channel).publish(channel,data,{processComplexTypes});}
+        catch (err) {this.onError(new NamedError("PoolClientPublishFail", err));}
     }
 
     getSubscriptions(includePending: boolean = false): string[] {

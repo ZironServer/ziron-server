@@ -7,9 +7,9 @@ Copyright(c) Luca Scaringella
 import {EMPTY_FUNCTION} from "../Constants";
 
 export interface ExternalBrokerClient {
-    subscribe(channel: string),
-    unsubscribe(channel: string),
-    publish(channel: string, data: any, processComplexTypes: boolean),
+    subscribe(channel: string): void,
+    unsubscribe(channel: string): void,
+    publish(channel: string, data: any, processComplexTypes: boolean): void,
 }
 
 export const defaultExternalBrokerClient: ExternalBrokerClient = {
