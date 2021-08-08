@@ -32,6 +32,7 @@ export default interface ServerOptions {
      * @description
      * Specifies if the client is allowed to publish into channels.
      * The PublishIn middleware will still be used to check access.
+     * @default true
      */
     allowClientPublish?: boolean,
     /**
