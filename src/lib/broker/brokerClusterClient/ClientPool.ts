@@ -41,6 +41,7 @@ export default class ClientPool {
             tempSocket = new Socket({...this.clientOptions});
             tempSocket.on("error",this._handleClientError);
             tempSocket.onPublish(this._handleClientPublish);
+            tempSocket.connect();
             this.clients[i] = tempSocket;
         }
     }
