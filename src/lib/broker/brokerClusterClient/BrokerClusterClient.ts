@@ -211,4 +211,13 @@ export default class BrokerClusterClient implements ExternalBrokerClient {
             this._emit("error",new NoMatchingBrokerClientError(channel));
         })
     }
+
+    /**
+     * [Use this method only when you know what you do.]
+     */
+    terminate() {
+        Object.values(this._brokerClientMap).forEach((client) => client.cleanUp());
+        this._brokerClientMap = {};
+        this._brokerUris = [];
+    }
 }

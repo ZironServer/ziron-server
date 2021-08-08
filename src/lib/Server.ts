@@ -339,4 +339,20 @@ export default class Server {
         }
         else next(true);
     }
+
+    /**
+     * Terminates the server.
+     * After termination, you should not use this instance anymore
+     * or anything else from the server.
+     * [Use this method only when you know what you do.]
+     */
+    terminate() {
+        this._wsServer.close();
+        this._httpServer.close();
+        Object.values(this.clients).forEach(client => client.terminate());
+        (this as Writable<Server>).clients = {};
+        (this as Writable<Server>).clientCount = 0;
+        this.stateClient?.disconnect();
+        this.internalBroker.terminate();
+    }
 }

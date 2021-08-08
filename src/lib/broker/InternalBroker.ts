@@ -122,4 +122,11 @@ export default class InternalBroker {
             }
         }
     }
+
+    /**
+     * [Use this method only when you know what you do.]
+     */
+    terminate() {
+        this.externalBrokerClient.terminate();
+    }
 }

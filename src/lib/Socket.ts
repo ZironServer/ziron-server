@@ -329,4 +329,12 @@ export default class Socket
         }
         this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
     }
+
+    /**
+     * Terminates the core socket.
+     * [Use this method only when you know what you do.]
+     */
+    public terminate() {
+        this._socket.terminate();
+    }
 }

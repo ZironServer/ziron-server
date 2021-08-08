@@ -155,4 +155,8 @@ export default class StateClient {
             this._emit("sessionPayloadChange",this.sessionPayload);
     }
 
+    public disconnect(): void {
+        this._stateSocket.disconnect();
+    }
+
 }
