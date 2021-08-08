@@ -349,10 +349,10 @@ export default class Server {
     terminate() {
         this._wsServer.close();
         this._httpServer.close();
-        Object.values(this.clients).forEach(client => client.terminate());
+        Object.values(this.clients).forEach(client => client._terminate());
         (this as Writable<Server>).clients = {};
         (this as Writable<Server>).clientCount = 0;
         this.stateClient?.disconnect();
-        this.internalBroker.terminate();
+        this.internalBroker._terminate();
     }
 }

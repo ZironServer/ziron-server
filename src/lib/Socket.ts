@@ -331,10 +331,18 @@ export default class Socket
     }
 
     /**
+     * @internal
      * Terminates the core socket.
      * [Use this method only when you know what you do.]
      */
-    public terminate() {
+    public _terminate() {
         this._socket.terminate();
+        (this as Writable<Socket>).open = false;
+        this._transport.clearBuffer();
+        (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).sendPreparedPackage = NOT_OPEN_FAILURE_FUNCTION;
+        this._unsubscribeAll();
+        this._clearListener();
     }
 }
