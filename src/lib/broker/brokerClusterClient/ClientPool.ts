@@ -66,6 +66,8 @@ export default class ClientPool {
         return Object.assign(Socket.parseOptionsFromUrl(this._options.uri),{
             ackTimeout: 3000,
             connectTimeout: 3000,
+            invokeSendTimeout: null,
+            transmitSendTimeout: null,
             autoReconnect: {
                 active: true,
                 initialDelay: 1000,
