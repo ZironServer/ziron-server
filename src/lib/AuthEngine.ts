@@ -50,7 +50,7 @@ export interface AuthOptions {
 
 export default class AuthEngine {
 
-    public readonly options: Required<AuthOptions> = {
+    private readonly options: Required<AuthOptions> = {
         secretKey: null,
         defaultExpiry: 86400,
         algorithm: 'HS256',
@@ -58,15 +58,17 @@ export default class AuthEngine {
         privateKey: null,
     };
 
-    private readonly _defaultSignOptions: SignOptions;
-    private readonly _defaultVerifyOptions: VerifyOptions;
-    private readonly _signatureKey: string;
-    private readonly _verificationKey:  string;
+    private _defaultSignOptions: SignOptions;
+    private _defaultVerifyOptions: VerifyOptions;
+    private _signatureKey: string;
+    private _verificationKey:  string;
 
     constructor(options: AuthOptions = {}) {
-        Object.assign(this.options,options);
+        this.setOptions(options);
+    }
 
-        //process keys.
+    public setOptions(options: AuthOptions = {}) {
+        Object.assign(this.options,options);
         if (this.options.privateKey != null || this.options.publicKey != null) {
             if (this.options.privateKey == null) {
                 throw new InvalidOptionsError('The authPrivateKey option must be specified if authPublicKey is specified');
