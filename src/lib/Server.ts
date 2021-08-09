@@ -68,7 +68,7 @@ export default class Server {
         brokerClusterClientMaxPoolSize: 12
     };
 
-    private readonly _joinToken: {secret: string, uri: string};
+    public readonly joinToken: {secret: string, uri: string};
     public readonly stateClientConnection?: Promise<void>;
     public readonly stateClient?: StateClient;
     public readonly originsChecker: OriginsChecker;
@@ -130,7 +130,7 @@ export default class Server {
         this._options.path = this._options.path === "" || this._options.path === "/" ? "" :
             !this._options.path.startsWith("/") ? "/" + this._options.path : this._options.path;
 
-        this._joinToken = parseJoinToken(this._options.join || '');
+        this.joinToken = parseJoinToken(this._options.join || '');
 
         this.stateClient = this._setUpStateClient();
         if(this.stateClient != null) this.stateClientConnection = this.stateClient.connect();
@@ -140,7 +140,7 @@ export default class Server {
         this.internalBroker = new InternalBroker(this);
         if(this.stateClient != null) {
             this.internalBroker.externalBrokerClient = new BrokerClusterClient(this.stateClient,this.internalBroker,{
-                joinTokenSecret: this._joinToken.secret,
+                joinTokenSecret: this.joinToken.secret,
                 maxClientPoolSize: this._options.brokerClusterClientMaxPoolSize
             });
         }
@@ -164,8 +164,8 @@ export default class Server {
             id: this._options.id,
             port: this._options.port,
             path: this._options.path,
-            joinTokenUri: this._joinToken.uri,
-            joinTokenSecret: this._joinToken.secret,
+            joinTokenUri: this.joinToken.uri,
+            joinTokenSecret: this.joinToken.secret,
             joinPayload: this._options.clusterJoinPayload,
             sharedData: this._options.clusterShared
         });
