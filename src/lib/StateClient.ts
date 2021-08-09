@@ -108,7 +108,6 @@ export default class StateClient {
             try {
                 const joinResponse: JoinResponse = await stateSocket.invoke("join",this._joinData);
                 this._handleBrokerUpdate(joinResponse.brokers);
-                this._updateLeadership(joinResponse.leader);
                 this._updateClusterSessionId(joinResponse.session.id);
                 this._updateClusterSessionPayload(joinResponse.session.shared);
             } catch (e) {
