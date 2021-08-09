@@ -89,7 +89,7 @@ export default class InternalBroker {
     publish(channel: string, data: any, processComplexTypes: boolean = false, publisher?: Socket) {
         this.externalBrokerClient.publish(channel,data,processComplexTypes);
         this._processPublish(channel,data,processComplexTypes,false,
-            this._publishToPublisher ? publisher : undefined);
+            this._publishToPublisher ? undefined : publisher);
     }
 
     _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, skipSocket?: Socket) {
