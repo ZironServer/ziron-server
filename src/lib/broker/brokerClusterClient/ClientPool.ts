@@ -6,7 +6,6 @@ Copyright(c) Luca Scaringella
 
 import {SocketOptions,Socket} from "ziron-client";
 import {hashToIndex} from "../../Utils";
-import {DataType} from "ziron-engine";
 import {EMPTY_FUNCTION} from "../../Constants";
 import {NamedError} from "ziron-errors";
 
@@ -20,7 +19,7 @@ export interface ClientPoolOptions {
 export default class ClientPool {
 
     public onError: (err: Error) => void = EMPTY_FUNCTION;
-    public onPublish: (channel: string, data: any, type: DataType) => void = EMPTY_FUNCTION;
+    public onPublish: (channel: string, data: any, complexDataType: boolean) => void = EMPTY_FUNCTION;
 
     private readonly _options: ClientPoolOptions;
     private readonly clientOptions: SocketOptions;
@@ -54,8 +53,8 @@ export default class ClientPool {
         this.onError(new NamedError("PoolClientError", error.stack));
     }
 
-    private _handleClientPublish = (channel: string, data: any, dataType: DataType) => {
-        this.onPublish(channel,data,dataType);
+    private _handleClientPublish = (channel: string, data: any, complexDataType: boolean) => {
+        this.onPublish(channel,data,complexDataType);
     }
 
     private _buildSocketOptions(): SocketOptions {

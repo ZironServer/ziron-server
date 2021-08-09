@@ -40,8 +40,8 @@ export default class InternalBroker {
         return [...this.exchangeChannels,...Object.keys(this.channels)].filter(distinctArrayFilter);
     }
 
-    processExternalPublish(channel: string, data: any, dataType: DataType) {
-        this._processPublish(channel,data,dataType !== DataType.JSON,true);
+    processExternalPublish(channel: string, data: any, complexDataType: boolean) {
+        this._processPublish(channel,data,complexDataType,true);
     }
 
     private _exchangeSubscribe(channel: string) {

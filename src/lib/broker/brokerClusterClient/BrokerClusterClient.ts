@@ -57,8 +57,8 @@ export default class BrokerClusterClient implements ExternalBrokerClient {
         this.updateToBrokerUris();
     }
 
-    private _processClientPoolPublishEvent = (channel: string, data: any, type: DataType) => {
-        this._internalBroker.processExternalPublish(channel,data,type);
+    private _processClientPoolPublishEvent = (channel: string, data: any, complexDataType: boolean) => {
+        this._internalBroker.processExternalPublish(channel,data,complexDataType);
     }
 
     private _handleClientPoolError = (error: Error) => {
