@@ -43,10 +43,7 @@ type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Prom
 
 export default class Server {
 
-    /**
-     * @internal
-     */
-    readonly _options: Required<ServerOptions> = {
+    protected readonly options: Required<ServerOptions> = {
         id: uniqId(),
         join: null,
         maxPayload: null,
@@ -68,6 +65,12 @@ export default class Server {
         brokerClusterClientMaxPoolSize: 12
     };
 
+    /**
+     * @internal
+     * Internal access for the socket.
+     */
+    public readonly _options: Required<ServerOptions>;
+
     public readonly joinToken: {secret: string, uri: string};
     public readonly stateClientConnection?: Promise<void>;
     public readonly stateClient?: StateClient;
@@ -75,15 +78,15 @@ export default class Server {
     public readonly auth: AuthEngine;
 
     get id(): string {
-        return this._options.id;
+        return this.options.id;
     }
 
     get port(): number {
-        return this._options.port;
+        return this.options.port;
     }
 
     get path(): string {
-        return this._options.path;
+        return this.options.path;
     }
 
     get leader(): boolean {
@@ -128,56 +131,57 @@ export default class Server {
     public refuseConnections: boolean = false;
 
     constructor(options: ServerOptions = {}) {
-        Object.assign(this._options,options);
+        Object.assign(this.options,options);
+        this._options = this.options;
 
-        this._options.path = this._options.path === "" || this._options.path === "/" ? "" :
-            !this._options.path.startsWith("/") ? "/" + this._options.path : this._options.path;
+        this.options.path = this.options.path === "" || this.options.path === "/" ? "" :
+            !this.options.path.startsWith("/") ? "/" + this.options.path : this.options.path;
 
-        this.joinToken = parseJoinToken(this._options.join || '');
+        this.joinToken = parseJoinToken(this.options.join || '');
 
         this.stateClient = this._setUpStateClient();
         if(this.stateClient != null) this.stateClientConnection = this.stateClient.connect();
-        this.auth = new AuthEngine(this._options.auth);
-        this.originsChecker = createOriginsChecker(this._options.origins);
+        this.auth = new AuthEngine(this.options.auth);
+        this.originsChecker = createOriginsChecker(this.options.origins);
 
         this.internalBroker = new InternalBroker(this);
         this._internalBroker = this.internalBroker;
         if(this.stateClient != null) {
             this.internalBroker.externalBrokerClient = new BrokerClusterClient(this.stateClient,this.internalBroker,{
                 joinTokenSecret: this.joinToken.secret,
-                maxClientPoolSize: this._options.brokerClusterClientMaxPoolSize
+                maxClientPoolSize: this.options.brokerClusterClientMaxPoolSize
             });
         }
         this.exchange = this.internalBroker.exchange;
 
         this._setUpSocketChLimit();
-        if(this._options.httpServer) {
+        if(this.options.httpServer) {
             this._checkHttpServerPort();
-            this._httpServer = this._options.httpServer;
+            this._httpServer = this.options.httpServer;
         }
         else this._httpServer = this._createBasicHttpServer();
 
-        if(this._options.healthCheckEndpoint) this._initHealthCheck();
+        if(this.options.healthCheckEndpoint) this._initHealthCheck();
         this._wsServer = this._setUpWsServer();
 
     }
 
     private _setUpStateClient() {
-        if(this._options.join == null) return undefined;
+        if(this.options.join == null) return undefined;
         return new StateClient({
-            id: this._options.id,
-            port: this._options.port,
-            path: this._options.path,
+            id: this.options.id,
+            port: this.options.port,
+            path: this.options.path,
             joinTokenUri: this.joinToken.uri,
             joinTokenSecret: this.joinToken.secret,
-            joinPayload: this._options.clusterJoinPayload,
-            sharedData: this._options.clusterShared
+            joinPayload: this.options.clusterJoinPayload,
+            sharedData: this.options.clusterShared
         });
     }
 
     private _setUpSocketChLimit() {
-        if(this._options.socketChannelLimit != null) {
-            const limit = this._options.socketChannelLimit;
+        if(this.options.socketChannelLimit != null) {
+            const limit = this.options.socketChannelLimit;
             this._checkSocketChLimitReached = (count) => count >= limit;
         }
         else this._checkSocketChLimitReached = () => false;
@@ -187,16 +191,16 @@ export default class Server {
         const wsServer = new WebSocketServer({
             server: this._httpServer,
             verifyClient: this._verifyClient.bind(this),
-            path: this._options.path,
-            ...(this._options.maxPayload != null ? {maxPayload: this._options.maxPayload} : {}),
-            ...(this._options.perMessageDeflate != null ? {perMessageDeflate: this._options.perMessageDeflate} : {}),
+            path: this.options.path,
+            ...(this.options.maxPayload != null ? {maxPayload: this.options.maxPayload} : {}),
+            ...(this.options.perMessageDeflate != null ? {perMessageDeflate: this.options.perMessageDeflate} : {}),
         });
-        wsServer.startAutoPing(this._options.pingInterval,true);
+        wsServer.startAutoPing(this.options.pingInterval,true);
         this._authTokenExpireCheckerTicker = setInterval(() => {
             for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
                 this.clients[id]._checkAuthTokenExpire();
             }
-        },this._options.authTokenExpireCheckInterval);
+        },this.options.authTokenExpireCheckInterval);
         wsServer.on('error',this._handleServerError.bind(this));
         wsServer.on('connection',this._handleSocketConnection.bind(this));
         return wsServer;
@@ -229,7 +233,7 @@ export default class Server {
     private _checkHttpServerPort() {
         if(this._httpServer.listening) {
             const addressInfo = this._httpServer.address();
-            if(typeof addressInfo !== 'object' || addressInfo?.port !== this._options.port)
+            if(typeof addressInfo !== 'object' || addressInfo?.port !== this.options.port)
                 throw new Error('The provided HTTP server is already listening to a different port than defined in the server options.')
         }
     }
@@ -237,7 +241,7 @@ export default class Server {
     public async listen(): Promise<void> {
         this._checkHttpServerPort();
         if(!this._httpServer.listening) return new Promise(res => {
-            this._httpServer.listen(this._options.port,() => res());
+            this._httpServer.listen(this.options.port,() => res());
         });
     }
 
@@ -275,7 +279,7 @@ export default class Server {
             }
 
             const readyData = await this.connectionHandler(zSocket);
-            const res = [this._options.pingInterval,authTokenState];
+            const res = [this.options.pingInterval,authTokenState];
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
