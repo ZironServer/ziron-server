@@ -84,14 +84,14 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     private readonly _httpServer: HTTP.Server | HTTPS.Server;
     private readonly _wsServer: WebSocketServer;
 
-    private _localEmitter: (EventEmitter<LocalEvents> & EventEmitter<E>) = new EventEmitter();
-    public readonly once: (EventEmitter<LocalEvents> & EventEmitter<E>)['once'] = this._localEmitter.once.bind(this._localEmitter);
-    public readonly on: (EventEmitter<LocalEvents> & EventEmitter<E>)['on'] = this._localEmitter.on.bind(this._localEmitter);
-    public readonly off: (EventEmitter<LocalEvents> & EventEmitter<E>)['off'] = this._localEmitter.off.bind(this._localEmitter);
+    protected emitter: (EventEmitter<LocalEvents> & EventEmitter<E>) = new EventEmitter();
+    public readonly once: (EventEmitter<LocalEvents> & EventEmitter<E>)['once'] = this.emitter.once.bind(this.emitter);
+    public readonly on: (EventEmitter<LocalEvents> & EventEmitter<E>)['on'] = this.emitter.on.bind(this.emitter);
+    public readonly off: (EventEmitter<LocalEvents> & EventEmitter<E>)['off'] = this.emitter.off.bind(this.emitter);
     /**
      * @internal
      */
-    public readonly _emit: (EventEmitter<LocalEvents> & EventEmitter<E>)['emit'] = this._localEmitter.emit.bind(this._localEmitter);
+    public readonly _emit: (EventEmitter<LocalEvents> & EventEmitter<E>)['emit'] = this.emitter.emit.bind(this.emitter);
 
     public readonly clientCount: number = 0;
     public readonly clients: Record<string, Socket> = {};
