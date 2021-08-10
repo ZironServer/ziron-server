@@ -29,8 +29,7 @@ type LocalEvents = {
     'error': [Error],
     'warning': [Error],
     'badSocketAuthToken': [Socket,Error,string],
-    'disconnection': [Socket,number,any],
-    'sharedUpdate': [Record<any, any>]
+    'disconnection': [Socket,number,any]
 };
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage | {attachment?: any}) => Promise<void> | void;
