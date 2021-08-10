@@ -65,11 +65,11 @@ export default class Socket
             this._emit('authTokenChange',authToken,oldAuthToken);
     };
 
-    private readonly _localEmitter: LocalEventEmitter = new EventEmitter();
-    public readonly once: LocalEventEmitter['once'] = this._localEmitter.once.bind(this._localEmitter);
-    public readonly on: LocalEventEmitter['on'] = this._localEmitter.on.bind(this._localEmitter);
-    public readonly off: LocalEventEmitter['off'] = this._localEmitter.off.bind(this._localEmitter);
-    private readonly _emit: LocalEventEmitter['emit'] = this._localEmitter.emit.bind(this._localEmitter);
+    private readonly _emitter: LocalEventEmitter = new EventEmitter();
+    public readonly once: LocalEventEmitter['once'] = this._emitter.once.bind(this._emitter);
+    public readonly on: LocalEventEmitter['on'] = this._emitter.on.bind(this._emitter);
+    public readonly off: LocalEventEmitter['off'] = this._emitter.off.bind(this._emitter);
+    private readonly _emit: LocalEventEmitter['emit'] = this._emitter.emit.bind(this._emitter);
 
     public readonly procedures: Procedures = {
         [InternalServerProcedures.Authenticate]: this._handleAuthenticateInvoke.bind(this),
@@ -120,12 +120,12 @@ export default class Socket
         this.remoteFamily = addresses.remoteFamily || null;
         this.remotePort = addresses.remotePort || null;
 
-        socket.on('error', err => this._localEmitter.emit('error',err));
+        socket.on('error', err => this._emitter.emit('error',err));
         socket.on('close', (code, reason) => this._destroy(code || 1001, reason));
 
         this._transport = new Transport({
             send: this._sendRaw.bind(this),
-            onListenerError: err => this._localEmitter.emit('error',err),
+            onListenerError: err => this._emitter.emit('error',err),
             onInvalidMessage: () => this._destroy(4400,'Bad message'),
             onInvoke: this._onInvoke.bind(this),
             onTransmit: this._onTransmit.bind(this)
@@ -151,7 +151,7 @@ export default class Socket
     }
 
     private _clearListener() {
-        this._localEmitter.off();
+        this._emitter.off();
     }
 
     private _destroy(code: number, reason?: string) {
