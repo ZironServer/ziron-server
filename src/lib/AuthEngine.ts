@@ -64,14 +64,14 @@ export default class AuthEngine {
     private _verificationKey:  string;
 
     constructor(options: AuthOptions = {}) {
-        this.setOptions(options);
+        this.updateOptions(options);
     }
 
     get options(): Required<AuthOptions> {
         return {...this._options};
     }
 
-    public setOptions(options: AuthOptions = {}) {
+    public updateOptions(options: AuthOptions = {}) {
         Object.assign(this._options,options);
         if (this._options.privateKey != null || this._options.publicKey != null) {
             if (this._options.privateKey == null) {
