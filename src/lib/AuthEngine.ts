@@ -50,7 +50,7 @@ export interface AuthOptions {
 
 export default class AuthEngine {
 
-    private readonly options: Required<AuthOptions> = {
+    private readonly _options: Required<AuthOptions> = {
         secretKey: null,
         defaultExpiry: 86400,
         algorithm: 'HS256',
@@ -67,31 +67,35 @@ export default class AuthEngine {
         this.setOptions(options);
     }
 
+    get options(): Required<AuthOptions> {
+        return {...this._options};
+    }
+
     public setOptions(options: AuthOptions = {}) {
-        Object.assign(this.options,options);
-        if (this.options.privateKey != null || this.options.publicKey != null) {
-            if (this.options.privateKey == null) {
+        Object.assign(this._options,options);
+        if (this._options.privateKey != null || this._options.publicKey != null) {
+            if (this._options.privateKey == null) {
                 throw new InvalidOptionsError('The authPrivateKey option must be specified if authPublicKey is specified');
-            } else if (this.options.publicKey == null) {
+            } else if (this._options.publicKey == null) {
                 throw new InvalidOptionsError('The authPublicKey option must be specified if authPrivateKey is specified');
             }
-            this._signatureKey = this.options.privateKey;
-            this._verificationKey = this.options.publicKey;
+            this._signatureKey = this._options.privateKey;
+            this._verificationKey = this._options.publicKey;
         } else {
-            if (this.options.secretKey == null) {
-                this.options.secretKey = crypto.randomBytes(32).toString('hex');
+            if (this._options.secretKey == null) {
+                this._options.secretKey = crypto.randomBytes(32).toString('hex');
             }
-            this._signatureKey = this.options.secretKey;
-            this._verificationKey = this.options.secretKey;
+            this._signatureKey = this._options.secretKey;
+            this._verificationKey = this._options.secretKey;
         }
 
         this._defaultSignOptions = {
-            expiresIn: this.options.defaultExpiry,
-            ...(this.options.algorithm != null ? {algorithm: this.options.algorithm} : {})
+            expiresIn: this._options.defaultExpiry,
+            ...(this._options.algorithm != null ? {algorithm: this._options.algorithm} : {})
         };
 
         this._defaultVerifyOptions = {
-            ...(this.options.algorithm != null ? {algorithms: [this.options.algorithm]} : {})
+            ...(this._options.algorithm != null ? {algorithms: [this._options.algorithm]} : {})
         }
     }
 
