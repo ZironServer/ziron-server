@@ -56,8 +56,6 @@ export default class Server {
         path: '/',
         auth: {},
         healthCheckEndpoint: true,
-        clusterJoinPayload: {},
-        clusterShared: {},
         httpServer: null,
     };
 
