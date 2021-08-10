@@ -13,6 +13,7 @@ import {ExternalBrokerClient}    from "./lib/broker/ExternalBrokerClient";
 import EventEmitter              from "emitix";
 import {Block}                   from "./lib/MiddlewareUtils";
 import {TimeoutError, Transport} from "ziron-engine";
+import InternalBroker            from "./lib/broker/InternalBroker";
 
 EventEmitter.onceTimeoutErrorCreator = () => new TimeoutError('Once timeout reached.','OnceListener');
 const prepareMultiTransmit = Transport.prepareMultiTransmit;
@@ -25,6 +26,7 @@ export {
     AuthEngine,
     Exchange,
     ExternalBrokerClient,
+    InternalBroker,
     prepareMultiTransmit,
     Block,
     ProcedureListener,
