@@ -25,12 +25,13 @@ declare module "http" {
     interface IncomingMessage {attachment?: any}
 }
 
-type LocalEventEmitter = EventEmitter<{
+type LocalEvents = {
     'error': [Error],
     'warning': [Error],
     'badSocketAuthToken': [Socket,Error,string],
-    'disconnection': [Socket,number,any]
-}>;
+    'disconnection': [Socket,number,any],
+    'sharedUpdate': [Record<any, any>]
+};
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage | {attachment?: any}) => Promise<void> | void;
 type SocketMiddleware = (socket: Socket) => Promise<void> | void;
@@ -39,7 +40,7 @@ type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | 
 type PublishInMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 
-export default class Server {
+export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     protected readonly options: Required<ServerOptions> = {
         id: uniqId(),
@@ -84,14 +85,14 @@ export default class Server {
     private readonly _httpServer: HTTP.Server | HTTPS.Server;
     private readonly _wsServer: WebSocketServer;
 
-    private _localEmitter: LocalEventEmitter = new EventEmitter();
-    public readonly once: LocalEventEmitter['once'] = this._localEmitter.once.bind(this._localEmitter);
-    public readonly on: LocalEventEmitter['on'] = this._localEmitter.on.bind(this._localEmitter);
-    public readonly off: LocalEventEmitter['off'] = this._localEmitter.off.bind(this._localEmitter);
+    private _localEmitter: (EventEmitter<LocalEvents> & EventEmitter<E>) = new EventEmitter();
+    public readonly once: (EventEmitter<LocalEvents> & EventEmitter<E>)['once'] = this._localEmitter.once.bind(this._localEmitter);
+    public readonly on: (EventEmitter<LocalEvents> & EventEmitter<E>)['on'] = this._localEmitter.on.bind(this._localEmitter);
+    public readonly off: (EventEmitter<LocalEvents> & EventEmitter<E>)['off'] = this._localEmitter.off.bind(this._localEmitter);
     /**
      * @internal
      */
-    public readonly _emit: LocalEventEmitter['emit'] = this._localEmitter.emit.bind(this._localEmitter);
+    public readonly _emit: (EventEmitter<LocalEvents> & EventEmitter<E>)['emit'] = this._localEmitter.emit.bind(this._localEmitter);
 
     public readonly clientCount: number = 0;
     public readonly clients: Record<string, Socket> = {};
