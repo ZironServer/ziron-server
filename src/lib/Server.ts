@@ -13,14 +13,12 @@ import * as HTTP from "http";
 import * as HTTPS from "https";
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
-import {parseJoinToken, Writable} from "./Utils";
+import {Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
-import StateClient from "./StateClient";
-import BrokerClusterClient from "./broker/brokerClusterClient/BrokerClusterClient";
 import {EMPTY_FUNCTION} from "./Constants";
 
 declare module "http" {
@@ -45,7 +43,6 @@ export default class Server {
 
     protected readonly options: Required<ServerOptions> = {
         id: uniqId(),
-        join: null,
         maxPayload: null,
         perMessageDeflate: null,
         socketChannelLimit: 1000,
@@ -62,7 +59,6 @@ export default class Server {
         clusterJoinPayload: {},
         clusterShared: {},
         httpServer: null,
-        brokerClusterClientMaxPoolSize: 12
     };
 
     /**
@@ -71,9 +67,6 @@ export default class Server {
      */
     public readonly _options: Required<ServerOptions>;
 
-    public readonly joinToken: {secret: string, uri: string};
-    public readonly stateClientConnection?: Promise<void>;
-    public readonly stateClient?: StateClient;
     public readonly originsChecker: OriginsChecker;
     public readonly auth: AuthEngine;
 
@@ -87,10 +80,6 @@ export default class Server {
 
     get path(): string {
         return this.options.path;
-    }
-
-    get leader(): boolean {
-        return this.stateClient?.leader ?? false;
     }
 
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
@@ -137,21 +126,11 @@ export default class Server {
         this.options.path = this.options.path === "" || this.options.path === "/" ? "" :
             !this.options.path.startsWith("/") ? "/" + this.options.path : this.options.path;
 
-        this.joinToken = parseJoinToken(this.options.join || '');
-
-        this.stateClient = this._setUpStateClient();
-        if(this.stateClient != null) this.stateClientConnection = this.stateClient.connect();
         this.auth = new AuthEngine(this.options.auth);
         this.originsChecker = createOriginsChecker(this.options.origins);
 
         this.internalBroker = new InternalBroker(this);
         this._internalBroker = this.internalBroker;
-        if(this.stateClient != null) {
-            this.internalBroker.externalBrokerClient = new BrokerClusterClient(this.stateClient,this.internalBroker,{
-                joinTokenSecret: this.joinToken.secret,
-                maxClientPoolSize: this.options.brokerClusterClientMaxPoolSize
-            });
-        }
         this.exchange = this.internalBroker.exchange;
 
         this._setUpSocketChLimit();
@@ -164,19 +143,6 @@ export default class Server {
         if(this.options.healthCheckEndpoint) this._initHealthCheck();
         this._wsServer = this._setUpWsServer();
 
-    }
-
-    private _setUpStateClient() {
-        if(this.options.join == null) return undefined;
-        return new StateClient({
-            id: this.options.id,
-            port: this.options.port,
-            path: this.options.path,
-            joinTokenUri: this.joinToken.uri,
-            joinTokenSecret: this.joinToken.secret,
-            joinPayload: this.options.clusterJoinPayload,
-            sharedData: this.options.clusterShared
-        });
     }
 
     private _setUpSocketChLimit() {
@@ -360,7 +326,6 @@ export default class Server {
         Object.values(this.clients).forEach(client => client._terminate());
         (this as Writable<Server>).clients = {};
         (this as Writable<Server>).clientCount = 0;
-        this.stateClient?.disconnect();
-        this.internalBroker._terminate();
+        this.internalBroker.terminate();
     }
 }

@@ -5,7 +5,7 @@ Copyright(c) Luca Scaringella
  */
 
 import Socket from "../Socket";
-import {Transport, DataType} from "ziron-engine";
+import {Transport} from "ziron-engine";
 import {InternalServerTransmits} from "ziron-events";
 import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBrokerClient";
 import Exchange from "../Exchange";
@@ -124,10 +124,9 @@ export default class InternalBroker {
     }
 
     /**
-     * @internal
      * [Use this method only when you know what you do.]
      */
-    _terminate() {
+    terminate() {
         this.externalBrokerClient.terminate();
     }
 }

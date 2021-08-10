@@ -19,12 +19,6 @@ export default interface ServerOptions {
     id?: string;
     /**
      * @description
-     * Specifies the join token to the cluster.
-     * This is required if you want to run a cluster.
-     */
-    join?: string | null;
-    /**
-     * @description
      * Specifies the auth options that are used to sign and verify JSON web tokens.
      */
     auth?: AuthOptions,
@@ -141,10 +135,4 @@ export default interface ServerOptions {
      * If no server is provided, a new one will be created.
      */
     httpServer?: HTTP.Server | HTTPS.Server | null;
-    /**
-     * Defines the max size of clients to a broker instance.
-     * The concrete max size is determined with the count of broker instances.
-     * @default 12
-     */
-    brokerClusterClientMaxPoolSize?: number;
 }
