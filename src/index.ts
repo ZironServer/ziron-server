@@ -14,6 +14,7 @@ import EventEmitter              from "emitix";
 import {Block}                   from "./lib/MiddlewareUtils";
 import {TimeoutError, Transport} from "ziron-engine";
 import InternalBroker            from "./lib/broker/InternalBroker";
+import {PortInUseError}          from "./lib/PortInUseError";
 
 EventEmitter.onceTimeoutErrorCreator = () => new TimeoutError('Once timeout reached.','OnceListener');
 const prepareMultiTransmit = Transport.prepareMultiTransmit;
@@ -21,6 +22,7 @@ const prepareMultiTransmit = Transport.prepareMultiTransmit;
 export * from 'ziron-engine';
 export {
     Server,
+    PortInUseError,
     ServerOptions,
     Socket,
     AuthEngine,

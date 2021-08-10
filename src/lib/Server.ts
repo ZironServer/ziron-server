@@ -20,6 +20,7 @@ import Exchange from "./Exchange";
 import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
+import {PortInUseError} from "./PortInUseError";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -204,8 +205,16 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     public async listen(): Promise<void> {
         this._checkHttpServerPort();
-        if(!this._httpServer.listening) return new Promise(res => {
-            this._httpServer.listen(this.options.port,() => res());
+        if(!this._httpServer.listening) return new Promise((res, rej) => {
+            const port = this.options.port;
+            const portErrorListener = (err) => {
+                if(err.code === 'EADDRINUSE') rej(new PortInUseError(port));
+            };
+            this._httpServer.once("error", portErrorListener);
+            this._httpServer.listen(port,() => {
+                this._httpServer.off("error",portErrorListener);
+                res();
+            });
         });
     }
 
