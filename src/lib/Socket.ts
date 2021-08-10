@@ -255,7 +255,7 @@ export default class Socket
     kickOut(channel: string, data?: any) {
         const index = this.subscriptions.indexOf(channel);
         if(index !== -1) {
-            this._server.internalBroker.socketUnsubscribe(this,channel);
+            this._server._internalBroker.socketUnsubscribe(this,channel);
             (this.subscriptions as string[]).splice(index,1);
             this.transmit(InternalServerTransmits.KickOut,[channel,data]);
         }
@@ -275,7 +275,7 @@ export default class Socket
                 }
             }
             if(!this.subscriptions.includes(channel)) {
-                this._server.internalBroker.socketSubscribe(this,channel);
+                this._server._internalBroker.socketSubscribe(this,channel);
                 (this.subscriptions as string[]).push(channel)
             }
             end();
@@ -286,7 +286,7 @@ export default class Socket
         if(typeof channel === "string") {
             const index = this.subscriptions.indexOf(channel);
             if(index !== -1) {
-                this._server.internalBroker.socketUnsubscribe(this,channel);
+                this._server._internalBroker.socketUnsubscribe(this,channel);
                 (this.subscriptions as string[]).splice(index,1);
             }
         }
@@ -295,7 +295,7 @@ export default class Socket
     private _unsubscribeAll() {
         const len = this.subscriptions.length;
         for(let i = 0; i < len; i++)
-            this._server.internalBroker.socketUnsubscribe(this,this.subscriptions[i]);
+            this._server._internalBroker.socketUnsubscribe(this,this.subscriptions[i]);
         (this as Writable<Socket>).subscriptions = [];
     }
 
@@ -311,7 +311,7 @@ export default class Socket
                 return end(4403);
             }
         }
-        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
+        this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
         end();
     }
 
@@ -327,7 +327,7 @@ export default class Socket
                 return;
             }
         }
-        this._server.internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
+        this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
     }
 
     /**

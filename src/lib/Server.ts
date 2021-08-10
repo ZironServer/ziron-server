@@ -118,8 +118,11 @@ export default class Server {
 
     /**
      * @internal
+     * Internal access for the socket.
      */
-    public internalBroker: InternalBroker;
+    public readonly _internalBroker: InternalBroker;
+
+    protected readonly internalBroker: InternalBroker;
 
     public exchange: Exchange;
     public refuseConnections: boolean = false;
@@ -138,6 +141,7 @@ export default class Server {
         this.originsChecker = createOriginsChecker(this._options.origins);
 
         this.internalBroker = new InternalBroker(this);
+        this._internalBroker = this.internalBroker;
         if(this.stateClient != null) {
             this.internalBroker.externalBrokerClient = new BrokerClusterClient(this.stateClient,this.internalBroker,{
                 joinTokenSecret: this.joinToken.secret,
