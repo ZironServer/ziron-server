@@ -97,6 +97,12 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     public readonly clientCount: number = 0;
     public readonly clients: Record<string, Socket> = {};
 
+    /**
+     * This is the count of web socket request means invokes and transmit since the server is listening.
+     * It is not the count of packages which will be greater.
+     */
+    public readonly wsRequestCount: number = 0;
+
     public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
     //Middlewares
@@ -323,6 +329,10 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     getInternalSubscriptions(): string[] {
         return this.internalBroker.getSubscriptionList();
+    }
+
+    resetWsRequestCount()  {
+        (this as Writable<Server>).wsRequestCount = 0;
     }
 
     /**
