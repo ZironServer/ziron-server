@@ -321,6 +321,10 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         else next(true);
     }
 
+    getInternalSubscriptions(): string[] {
+        return this.internalBroker.getSubscriptionList();
+    }
+
     /**
      * Terminates the server.
      * After termination, you should not use this instance anymore
