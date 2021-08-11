@@ -30,7 +30,7 @@ type LocalEvents = {
     'error': [Error],
     'warning': [Error],
     'badSocketAuthToken': [Socket,Error,string],
-    'disconnection': [Socket,number,any]
+    'disconnection': [Socket,number,any],
 };
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage | {attachment?: any}) => Promise<void> | void;
@@ -82,7 +82,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     }
 
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
-    private readonly _httpServer: HTTP.Server | HTTPS.Server;
+    public readonly httpServer: HTTP.Server | HTTPS.Server;
     private readonly _wsServer: WebSocketServer;
 
     protected emitter: (EventEmitter<LocalEvents> & EventEmitter<E>) = new EventEmitter();
@@ -135,9 +135,9 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         this._setUpSocketChLimit();
         if(this.options.httpServer) {
             this._checkHttpServerPort();
-            this._httpServer = this.options.httpServer;
+            this.httpServer = this.options.httpServer;
         }
-        else this._httpServer = this._createBasicHttpServer();
+        else this.httpServer = this._createBasicHttpServer();
 
         if(this.options.healthCheckEndpoint) this._initHealthCheck();
         this._wsServer = this._setUpWsServer();
@@ -154,7 +154,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     private _setUpWsServer() {
         const wsServer = new WebSocketServer({
-            server: this._httpServer,
+            server: this.httpServer,
             verifyClient: this._verifyClient.bind(this),
             path: this.options.path,
             ...(this.options.maxPayload != null ? {maxPayload: this.options.maxPayload} : {}),
@@ -172,7 +172,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     }
 
     private _initHealthCheck() {
-        this._httpServer.on('request', function (req, res) {
+        this.httpServer.on('request', function (req, res) {
             if (req.url === '/healthCheck') {
                 res.writeHead(200, {'Content-Type': 'text/html'});
                 res.end('OK');
@@ -196,8 +196,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     }
 
     private _checkHttpServerPort() {
-        if(this._httpServer.listening) {
-            const addressInfo = this._httpServer.address();
+        if(this.httpServer.listening) {
+            const addressInfo = this.httpServer.address();
             if(typeof addressInfo !== 'object' || addressInfo?.port !== this.options.port)
                 throw new Error('The provided HTTP server is already listening to a different port than defined in the server options.')
         }
@@ -205,14 +205,14 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     public async listen(): Promise<void> {
         this._checkHttpServerPort();
-        if(!this._httpServer.listening) return new Promise((res, rej) => {
+        if(!this.httpServer.listening) return new Promise((res, rej) => {
             const port = this.options.port;
             const portErrorListener = (err) => {
                 if(err.code === 'EADDRINUSE') rej(new PortInUseError(port));
             };
-            this._httpServer.once("error", portErrorListener);
-            this._httpServer.listen(port,() => {
-                this._httpServer.off("error",portErrorListener);
+            this.httpServer.once("error", portErrorListener);
+            this.httpServer.listen(port,() => {
+                this.httpServer.off("error",portErrorListener);
                 res();
             });
         });
@@ -329,7 +329,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
      */
     terminate() {
         this._wsServer.close();
-        this._httpServer.close();
+        this.httpServer.close();
         Object.values(this.clients).forEach(client => client._terminate());
         (this as Writable<Server>).clients = {};
         (this as Writable<Server>).clientCount = 0;
