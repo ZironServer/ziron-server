@@ -101,9 +101,9 @@ export default class Socket
     readonly request: any;
     readonly handshakeAttachment: any;
 
-    public readonly remotePort: number | string | null;
-    public readonly remoteAddress: string | null;
-    public readonly remoteFamily: string | null;
+    public readonly remotePort: number;
+    public readonly remoteAddress: string;
+    public readonly remoteFamily: string;
 
     public readonly subscriptions: ReadonlyArray<string> = [];
 
@@ -117,9 +117,9 @@ export default class Socket
         this.handshakeAttachment = upgradeRequest.attachment;
 
         const addresses = this._socket._socket;
-        this.remoteAddress = addresses.remoteAddress || null;
-        this.remoteFamily = addresses.remoteFamily || null;
-        this.remotePort = addresses.remotePort || null;
+        this.remoteAddress = addresses.remoteAddress!;
+        this.remoteFamily = addresses.remoteFamily!;
+        this.remotePort = addresses.remotePort!;
 
         socket.on('error', err => this._emitter.emit('error',err));
         socket.on('close', (code, reason) => this._destroy(code || 1001, reason));
