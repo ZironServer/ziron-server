@@ -242,18 +242,18 @@ export default class Socket
         }
     }
 
-    private _onInvoke(event: any, data: any, end: (data?: any, processComplexTypes?: boolean) => void,
+    private _onInvoke(procedure: string, data: any, end: (data?: any, processComplexTypes?: boolean) => void,
                       reject: (err?: any) => void, type: DataType)
     {
         (this._server as Writable<Server>).wsRequestCount++;
-        if(this.procedures[event]) return this.procedures[event]!(data,end,reject,type);
-        this.onUnknownInvoke(event,data,end,reject,type);
+        if(this.procedures[procedure]) return this.procedures[procedure]!(data,end,reject,type);
+        this.onUnknownInvoke(procedure,data,end,reject,type);
     }
 
-    private _onTransmit(event: string,data: any,type: DataType) {
+    private _onTransmit(receiver: string,data: any,type: DataType) {
         (this._server as Writable<Server>).wsRequestCount++;
-        if(this.receivers[event]) return this.receivers[event]!(data,type);
-        this.onUnknownTransmit(event,data,type);
+        if(this.receivers[receiver]) return this.receivers[receiver]!(data,type);
+        this.onUnknownTransmit(receiver,data,type);
     }
 
     // noinspection JSUnusedGlobalSymbols
