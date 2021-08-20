@@ -242,7 +242,9 @@ export default class Socket
         }
     }
 
-    private _onInvoke(event: string,data: any,end: (data?: any) => void,reject: (err?: any) => void, type: DataType) {
+    private _onInvoke(event: any, data: any, end: (data?: any, processComplexTypes?: boolean) => void,
+                      reject: (err?: any) => void, type: DataType)
+    {
         (this._server as Writable<Server>).wsRequestCount++;
         if(this.procedures[event]) return this.procedures[event]!(data,end,reject,type);
         this.onUnknownInvoke(event,data,end,reject,type);
