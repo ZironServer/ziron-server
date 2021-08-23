@@ -15,7 +15,8 @@ import {
 import Server from "./Server";
 import {WebSocket} from "z-uws";
 import * as HTTP from "http";
-import {Writable} from "./Utils";
+import isIp = require('is-ip');
+import {tryGetClientIpFromHeaders, tryGetClientPortFromHeaders, Writable} from "./Utils";
 import {
     BadConnectionType,
     Transport,
@@ -103,7 +104,10 @@ export default class Socket
 
     public readonly remotePort: number;
     public readonly remoteAddress: string;
-    public readonly remoteFamily: string;
+    /**
+     * Either 4 or 6.
+     */
+    public readonly remoteFamily: number;
 
     public readonly subscriptions: ReadonlyArray<string> = [];
 
@@ -117,9 +121,10 @@ export default class Socket
         this.handshakeAttachment = upgradeRequest.attachment;
 
         const addresses = this._socket._socket;
-        this.remoteAddress = addresses.remoteAddress!;
-        this.remoteFamily = addresses.remoteFamily!;
-        this.remotePort = addresses.remotePort!;
+
+        this.remoteAddress = tryGetClientIpFromHeaders(upgradeRequest) || addresses.remoteAddress!;
+        this.remotePort = tryGetClientPortFromHeaders(upgradeRequest) || addresses.remotePort!;
+        this.remoteFamily = isIp.version(this.remoteAddress) || 4;
 
         socket.on('error', err => this._emitter.emit('error',err));
         socket.on('close', (code, reason) => this._destroy(code || 1001, reason));
