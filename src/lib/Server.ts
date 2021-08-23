@@ -50,7 +50,6 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         allowClientPublish: true,
         publishToPublisher: true,
         ackTimeout: 7000,
-        authTokenExpireCheckInterval: 12000,
         pingInterval: 8000,
         origins: null,
         port: 3000,
@@ -171,7 +170,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
             for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
                 this.clients[id]._checkAuthTokenExpire();
             }
-        },this.options.authTokenExpireCheckInterval);
+        },this.options.auth.expireCheckInterval ?? 12000);
         wsServer.on('error',this._handleServerError.bind(this));
         wsServer.on('connection',this._handleSocketConnection.bind(this));
         return wsServer;

@@ -21,7 +21,14 @@ export default interface ServerOptions {
      * @description
      * Specifies the auth options that are used to sign and verify JSON web tokens.
      */
-    auth?: AuthOptions,
+    auth?: AuthOptions & {
+        /**
+         * @description
+         * The interval when the server checks the for expired auth tokens.
+         * @default 12000ms
+         */
+        expireCheckInterval?: number,
+    },
     /**
      * @description
      * Specifies if the client is allowed to publish into channels.
@@ -59,12 +66,6 @@ export default interface ServerOptions {
      * is sent otherwise the socket will be disconnected.
      */
     pingInterval?: number,
-    /**
-     * @description
-     * The interval when the server checks the for expired auth tokens.
-     * @default 12000ms
-     */
-    authTokenExpireCheckInterval?: number,
     /**
      * @description
      * Specifies the maximum allowed message size in bytes.
