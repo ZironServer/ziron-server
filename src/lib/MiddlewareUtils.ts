@@ -11,15 +11,16 @@ export class Block {
 
     toString() {return `${this.name} (${this.code}): ${this.message}`;}
 
+    constructor()
     constructor(code: number, message?: string)
     constructor(name: string ,message?: string, code?: number)
-    constructor(nameOrCode: string | number,message?: string, code?: number) {
+    constructor(nameOrCode?: string | number,message?: string, code?: number) {
         if(typeof nameOrCode === 'number') {
-            this.name = `MiddlewareBlock`;
+            this.name = 'MiddlewareBlock';
             this.code = nameOrCode;
         }
         else {
-            this.name = nameOrCode;
+            this.name = nameOrCode || 'MiddlewareBlock';
             this.code = code || 4403;
         }
         this.message = message;
