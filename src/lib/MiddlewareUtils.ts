@@ -6,9 +6,14 @@ Copyright(c) Luca Scaringella
 
 export class Block {
     readonly code: number;
+    readonly name?: string;
     readonly message?: string;
-    constructor(code: number = 4403, message?: string) {
-        this.code = code;
+
+    toString() {return `${this.name} (${this.code}): ${this.message}`;}
+
+    constructor(name: string = 'UnknownMiddlewareBlock',message?: string, code: number = 4403) {
+        this.name = name;
         this.message = message;
+        this.code = code;
     }
 }

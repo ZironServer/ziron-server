@@ -280,8 +280,11 @@ export default class Socket
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
                 catch (err) {
-                    if(!(err instanceof Block)) this._server._emit('error', err);
-                    return end(4403);
+                    if(err instanceof Block) return end(err);
+                    else {
+                        this._server._emit('error', err);
+                        return end(4403);
+                    }
                 }
             }
             if(!this.subscriptions.includes(channel)) {
@@ -317,8 +320,11 @@ export default class Socket
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
             catch (err) {
-                if(!(err instanceof Block)) this._server._emit('error', err);
-                return end(4403);
+                if(err instanceof Block) return end(err);
+                else {
+                    this._server._emit('error', err);
+                    return end(4403);
+                }
             }
         }
         this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
