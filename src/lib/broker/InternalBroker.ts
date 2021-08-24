@@ -93,7 +93,7 @@ export default class InternalBroker {
     }
 
     _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, skipSocket?: Socket) {
-        if(this.exchangeChannels.includes(channel)) this.exchange._emitPublish(channel,data,external);
+        if(this.exchangeChannels.includes(channel)) this.exchange._emitPublish(channel,data,external,processComplexTypes);
         const sockets = this.channels[channel];
         if(sockets) {
             const preparedPackage = Transport.prepareMultiTransmit

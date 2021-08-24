@@ -7,7 +7,7 @@ Copyright(c) Luca Scaringella
 import EventEmitter from "emitix";
 import Socket from "./Socket";
 
-type PublishEmitter = EventEmitter<{[key: string]: [any,boolean]}>;
+type PublishEmitter = EventEmitter<{[key: string]: [any,boolean,boolean]}>;
 
 export default class Exchange {
 
