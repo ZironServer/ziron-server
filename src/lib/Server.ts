@@ -139,8 +139,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
         this._setUpSocketChLimit();
         if(this.options.httpServer) {
-            this._checkHttpServerPort();
             this.httpServer = this.options.httpServer;
+            this._checkHttpServerPort();
         }
         else this.httpServer = this._createBasicHttpServer();
 
