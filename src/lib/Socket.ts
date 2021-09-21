@@ -252,12 +252,14 @@ export default class Socket
     private _onInvoke(procedure: string, data: any, end: (data?: any, processComplexTypes?: boolean) => void,
                       reject: (err?: any) => void, type: DataType)
     {
+        if(this._server.ignoreFurtherInvokes) return;
         (this._server as Writable<Server>).wsRequestCount++;
         if(this.procedures[procedure]) return this.procedures[procedure]!(data,end,reject,type);
         this.onUnknownInvoke(procedure,data,end,reject,type);
     }
 
     private _onTransmit(receiver: string,data: any,type: DataType) {
+        if(this._server.ignoreFurtherTransmits) return;
         (this._server as Writable<Server>).wsRequestCount++;
         if(this.receivers[receiver]) return this.receivers[receiver]!(data,type);
         this.onUnknownTransmit(receiver,data,type);

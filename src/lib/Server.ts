@@ -122,6 +122,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     public exchange: Exchange;
     public refuseConnections: boolean = false;
+    public ignoreFurtherTransmits: boolean = false;
+    public ignoreFurtherInvokes: boolean = false;
 
     constructor(options: ServerOptions = {}) {
         Object.assign(this.options,options);
