@@ -224,24 +224,23 @@ export default class Socket
     }
 
     private async _handleAuthenticateInvoke(signedAuthToken: any, end: (data?: any) => void, reject: (err?: any) => void) {
-        try {
-            await this._processAuthToken(signedAuthToken);
-            end();
-        }
+        try {await this._processAuthToken(signedAuthToken,() => end());}
         catch (err) {reject(err)}
     }
 
     /**
      * @internal
      * @param signedAuthToken
+     * @param successCb
      * @private
      */
-    async _processAuthToken(signedAuthToken: string) {
+    async _processAuthToken(signedAuthToken: string,successCb?: () => void) {
         try {
             const plainAuthToken = await this._server.auth.verifyToken(signedAuthToken);
             if(this._server.authenticateMiddleware)
                 await this._server.authenticateMiddleware(this, plainAuthToken, signedAuthToken);
             this.setAuth(plainAuthToken,signedAuthToken);
+            if(successCb) successCb();
         }
         catch (err) {
             if(err && err.badAuthToken) this._server._emit('badSocketAuthToken',this,err,signedAuthToken);
