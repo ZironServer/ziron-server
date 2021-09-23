@@ -20,13 +20,13 @@
   "dependencies": {
     "base64id": "2.0.0",
     "uniqid": "^5.4.0",
-    "emitix": "^1.1.5",
+    "emitix": "^1.1.6",
     "@types/jsonwebtoken": "8.3.8",
     "jsonwebtoken": "8.5.1",
     "z-uws": "^3.0.2",
     "ziron-errors": "1.2.4",
     "ziron-events": "1.0.3",
-    "ziron-engine": "0.4.3",
+    "ziron-engine": "0.4.4",
     "@types/node": "^13.7.6",
     "is-ip": "^3.1.0"
   },
