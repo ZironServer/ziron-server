@@ -113,10 +113,11 @@ export default interface ServerOptions {
      */
     origins?: string[] | string | null;
     /**
-     * Specifies if the server should automatically provide a health check HTTP endpoint.
+     * Specifies if the server should automatically provide a health HTTP endpoint.
+     * The endpoint could be used for Docker health checks.
      * @default true
      */
-    healthCheckEndpoint?: boolean;
+    healthEndpoint?: boolean;
     /**
      * Defines an already existing HTTP server that should be used.
      * Notice that an error will be thrown when the provided server is already

@@ -55,7 +55,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         port: 3000,
         path: '/',
         auth: {},
-        healthCheckEndpoint: true,
+        healthEndpoint: true,
         httpServer: null,
     };
 
@@ -104,6 +104,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
+    public healthCheck: () => Promise<boolean> | boolean = () => true;
+
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
     public socketMiddleware: SocketMiddleware | undefined;
@@ -146,7 +148,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         }
         else this.httpServer = this._createBasicHttpServer();
 
-        if(this.options.healthCheckEndpoint) this._initHealthCheck();
+        if(this.options.healthEndpoint) this._initHealthEndpoint();
         this._wsServer = this._setUpWsServer();
 
     }
@@ -178,11 +180,14 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         return wsServer;
     }
 
-    private _initHealthCheck() {
-        this.httpServer.on('request', function (req, res) {
-            if (req.url === '/healthCheck') {
-                res.writeHead(200, {'Content-Type': 'text/html'});
-                res.end('OK');
+    private _initHealthEndpoint() {
+        this.httpServer.on('request', async (req, res) => {
+            if (req.method === 'GET' && req.url === '/health') {
+                let healthy: boolean = false;
+                try {healthy = await this.healthCheck()}
+                catch (err) {this._emit('error', err)}
+                res.writeHead(healthy ? 200 : 500, {'Content-Type': 'text/html'});
+                res.end(healthy ? 'Healthy' : 'Unhealthy');
             }
         });
     }
