@@ -22,6 +22,7 @@ import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
 import {PortInUseError} from "./PortInUseError";
 import * as Http from "http";
+import * as url from "url";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -192,8 +193,10 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
             HTTPS.createServer({...httpOptions,...this.options.tls}) :
             HTTP.createServer(httpOptions);
 
-            if(this.options.healthEndpoint && req.path === '/health' && req.method === 'GET') {
         httpServer.on("request",async (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => {
+            if(this.options.healthEndpoint && req.method === 'GET' &&
+                url.parse(req.url || "").pathname === '/health')
+            {
                 let healthy: boolean = false;
                 try {healthy = await this.healthCheck()}
                 catch (err) {this._emit('error', err)}
@@ -207,7 +210,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
                     'Content-Length': body?.length || 0,
                     'Content-Type': 'text/plain'
                 });
-                return res.end(body);
+                res.end(body);
             }
         })
         httpServer.on('error', (err: Error): void => {
