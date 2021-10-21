@@ -1,6 +1,6 @@
 {
   "name": "ziron-server",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "description": "Ziron server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
