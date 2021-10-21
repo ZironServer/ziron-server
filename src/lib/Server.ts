@@ -21,6 +21,7 @@ import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
 import {PortInUseError} from "./PortInUseError";
+import * as Http from "http";
 
 declare module "http" {
     interface IncomingMessage {attachment?: any}
@@ -56,7 +57,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         path: '/',
         auth: {},
         healthEndpoint: true,
-        httpServer: null,
+        tls: null,
+        maxHttpHeaderSize: null
     };
 
     /**
@@ -104,6 +106,15 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
+    /**
+     * @description
+     * Set this property to handle HTTP requests.
+     * All HTTP requests (except health endpoint requests) will be answered
+     * with 426 (Upgrade Required) when this property is undefined.
+     * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
+     */
+    public httpRequestHandler?: (req: HTTP.ClientRequest, res: HTTP.ServerResponse) => Promise<any> | any;
+
     public healthCheck: () => Promise<boolean> | boolean = () => true;
 
     //Middlewares
@@ -142,13 +153,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         this.exchange = this.internalBroker.exchange;
 
         this._setUpSocketChLimit();
-        if(this.options.httpServer) {
-            this.httpServer = this.options.httpServer;
-            this._checkHttpServerPort();
-        }
-        else this.httpServer = this._createBasicHttpServer();
-
-        if(this.options.healthEndpoint) this._initHealthEndpoint();
+        this.httpServer = this._createHttpServer();
         this._wsServer = this._setUpWsServer();
 
     }
@@ -180,43 +185,38 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         return wsServer;
     }
 
-    private _initHealthEndpoint() {
-        this.httpServer.on('request', async (req, res) => {
-            if (req.method === 'GET' && req.url === '/health') {
+    private _createHttpServer() {
+        const httpOptions: Http.ServerOptions = this.options.maxHttpHeaderSize != null ?
+            {maxHeaderSize: this.options.maxHttpHeaderSize} : {};
+        const httpServer = this.options.tls != null ?
+            HTTPS.createServer({...httpOptions,...this.options.tls}) :
+            HTTP.createServer(httpOptions);
+
+        httpServer.on("request",async (req: HTTP.ClientRequest, res: HTTP.ServerResponse) => {
+            if(this.options.healthEndpoint && req.path === '/health' && req.method === 'GET') {
                 let healthy: boolean = false;
                 try {healthy = await this.healthCheck()}
                 catch (err) {this._emit('error', err)}
                 res.writeHead(healthy ? 200 : 500, {'Content-Type': 'text/html'});
                 res.end(healthy ? 'Healthy' : 'Unhealthy');
             }
-        });
-    }
-
-    private _createBasicHttpServer() {
-        const httpServer = HTTP.createServer((_: any, res: HTTP.ServerResponse): void => {
-            const body = HTTP.STATUS_CODES[426];
-            res.writeHead(426, {
-                'Content-Length': body?.length || 0,
-                'Content-Type': 'text/plain'
-            });
-            return res.end(body);
-        });
+            else if(this.httpRequestHandler) this.httpRequestHandler(req,res);
+            else {
+                const body = HTTP.STATUS_CODES[426];
+                res.writeHead(426, {
+                    'Content-Length': body?.length || 0,
+                    'Content-Type': 'text/plain'
+                });
+                return res.end(body);
+            }
+        })
         httpServer.on('error', (err: Error): void => {
             this._emit("error",err);
         });
         return httpServer;
     }
 
-    private _checkHttpServerPort() {
-        if(this.httpServer.listening) {
-            const addressInfo = this.httpServer.address();
-            if(typeof addressInfo !== 'object' || addressInfo?.port !== this.options.port)
-                throw new Error('The provided HTTP server is already listening to a different port than defined in the server options.')
-        }
-    }
-
     public async listen(): Promise<void> {
-        this._checkHttpServerPort();
         if(!this.httpServer.listening) return new Promise((res, rej) => {
             const port = this.options.port;
             const portErrorListener = (err) => {

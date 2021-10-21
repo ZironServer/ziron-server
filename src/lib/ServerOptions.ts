@@ -5,8 +5,7 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import {AuthOptions} from "./AuthEngine";
-import * as HTTP from "http";
-import * as HTTPS from "https";
+import * as tls from "tls";
 
 export default interface ServerOptions {
     /**
@@ -119,10 +118,13 @@ export default interface ServerOptions {
      */
     healthEndpoint?: boolean;
     /**
-     * Defines an already existing HTTP server that should be used.
-     * Notice that an error will be thrown when the provided server is already
-     * listening to a different port than defined in the server options.
-     * If no server is provided, a new one will be created.
+     * Defines TLS options.
+     * When providing these options, an HTTPS server will be created instead of an HTTP server.
+     * @default null
      */
-    httpServer?: HTTP.Server | HTTPS.Server | null;
+    tls?: tls.SecureContextOptions & tls.TlsOptions | null;
+    /**
+     * Overrides the default max HTTP requests header length in bytes.
+     */
+    maxHttpHeaderSize?: number | null;
 }
