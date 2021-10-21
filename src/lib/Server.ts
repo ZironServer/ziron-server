@@ -113,7 +113,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
      * with 426 (Upgrade Required) when this property is undefined.
      * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
      */
-    public httpRequestHandler?: (req: HTTP.ClientRequest, res: HTTP.ServerResponse) => Promise<any> | any;
+    public httpRequestHandler?: (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => Promise<any> | any;
 
     public healthCheck: () => Promise<boolean> | boolean = () => true;
 
@@ -192,8 +192,8 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
             HTTPS.createServer({...httpOptions,...this.options.tls}) :
             HTTP.createServer(httpOptions);
 
-        httpServer.on("request",async (req: HTTP.ClientRequest, res: HTTP.ServerResponse) => {
             if(this.options.healthEndpoint && req.path === '/health' && req.method === 'GET') {
+        httpServer.on("request",async (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => {
                 let healthy: boolean = false;
                 try {healthy = await this.healthCheck()}
                 catch (err) {this._emit('error', err)}
