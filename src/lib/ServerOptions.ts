@@ -122,7 +122,7 @@ export default interface ServerOptions {
      * When providing these options, an HTTPS server will be created instead of an HTTP server.
      * @default null
      */
-    tls?: tls.SecureContextOptions & tls.TlsOptions | null;
+    tls?: (tls.SecureContextOptions & tls.TlsOptions) | null;
     /**
      * Overrides the default max HTTP requests header length in bytes.
      */
