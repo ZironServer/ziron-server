@@ -23,9 +23,9 @@
     "@types/jsonwebtoken": "^8.5.5",
     "jsonwebtoken": "^8.5.1",
     "z-uws": "^3.0.2",
-    "ziron-errors": "1.2.4",
-    "ziron-events": "1.0.3",
-    "ziron-engine": "0.4.5",
+    "ziron-errors": "1.2.5",
+    "ziron-events": "1.0.4",
+    "ziron-engine": "0.5.0",
     "@types/node": "^13.7.6",
     "is-ip": "^3.1.0",
     "docker-secret": "^1.2.3"
