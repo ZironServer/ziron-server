@@ -42,6 +42,14 @@ type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | 
 type PublishInMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
 
+/**
+ * @description
+ * The Ziron server.
+ * Mostly everything is related to web socket protocol on the server instance.
+ * But an HTTP/HTTPS server is created to catch upgrade requests and to create a health endpoint.
+ * All other HTTP requests will be answered with 426 (Upgrade Required),
+ * but it is possible to provide a custom HTTP request handler.
+ */
 export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     protected readonly options: Required<ServerOptions> = {
@@ -96,7 +104,15 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
      */
     public readonly _emit: (EventEmitter<LocalEvents> & EventEmitter<E>)['emit'] = this.emitter.emit.bind(this.emitter);
 
+    /**
+     * @description
+     * The connected web socket clients count.
+     */
     public readonly clientCount: number = 0;
+    /**
+     * @description
+     * The connected web socket clients.
+     */
     public readonly clients: Record<string, Socket> = {};
 
     /**
@@ -135,6 +151,10 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     protected readonly internalBroker: InternalBroker;
 
     public exchange: Exchange;
+    /**
+     * @description
+     * Boolean that indicates if the server should reject web socket handshakes.
+     */
     public refuseConnections: boolean = false;
     public ignoreFurtherTransmits: boolean = false;
     public ignoreFurtherInvokes: boolean = false;
