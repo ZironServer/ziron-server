@@ -82,8 +82,8 @@ export default interface ServerOptions {
      */
     port?: number;
     /**
-     * The URL path of the server where handshake requests are processed and
-     * the parent path of the health endpoint.
+     * The URL path of the server where handshake requests are processed, and the health endpoint is provided.
+     * Notice multiple slashes at the end are not supported and will be removed.
      * @default '/'
      */
     path?: string;
