@@ -14,8 +14,7 @@ const argvPort = argvDefaultPort ? parseInt(rawPortOption.substring(2)) : parseI
 const defaultPort = argvDefaultPort ? (argvPort || 3000) : 3000;
 const port = (!argvDefaultPort && argvPort) ? argvPort :
     parseInt(variables.PORT) || defaultPort;
-const path = preprocessPath(process.argv[3] != null ? process.argv[3] : (variables.PATH || ''));
-
+const path = preprocessPath(process.argv[3] != null ? process.argv[3] : (variables.SERVER_PATH || ''));
 
 (require("http")).request({
     host: "localhost",
