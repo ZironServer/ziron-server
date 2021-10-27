@@ -16,8 +16,6 @@ const port = (!argvDefaultPort && argvPort) ? argvPort :
     parseInt(variables.PORT) || defaultPort;
 const path = preprocessPath(process.argv[3] != null ? process.argv[3] : (variables.PATH || ''));
 
-console.log(port);
-console.log(path + "/health");
 
 (require("http")).request({
     host: "localhost",
