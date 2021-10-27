@@ -13,7 +13,7 @@ import * as HTTP from "http";
 import * as HTTPS from "https";
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
-import {Writable} from "./Utils";
+import {preprocessPath, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import Exchange from "./Exchange";
@@ -143,8 +143,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         Object.assign(this.options,options);
         this._options = this.options;
 
-        this.options.path = this.options.path === "" || this.options.path === "/" ? "" :
-            !this.options.path.startsWith("/") ? "/" + this.options.path : this.options.path;
+        this.options.path = preprocessPath(this.options.path);
 
         this.auth = new AuthEngine(this.options.auth);
         this.originsChecker = createOriginsChecker(this.options.origins);
@@ -172,6 +171,7 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
             server: this.httpServer,
             verifyClient: this._verifyClient.bind(this),
             path: this.options.path,
+            strictPath: false,
             ...(this.options.maxPayload != null ? {maxPayload: this.options.maxPayload} : {}),
             ...(this.options.perMessageDeflate != null ? {perMessageDeflate: this.options.perMessageDeflate} : {}),
         });
@@ -193,9 +193,10 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
             HTTPS.createServer({...httpOptions,...this.options.tls}) :
             HTTP.createServer(httpOptions);
 
+        const healthPath = `${this.options.path}/health`;
         httpServer.on("request",async (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => {
             if(this.options.healthEndpoint && req.method === 'GET' &&
-                url.parse(req.url || "").pathname === '/health')
+                url.parse(req.url || "").pathname === healthPath)
             {
                 let healthy: boolean = false;
                 try {healthy = await this.healthCheck()}
