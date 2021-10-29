@@ -28,7 +28,7 @@ declare module "http" {
     interface IncomingMessage {attachment?: any}
 }
 
-type LocalEvents<S> = {
+type LocalEvents<S extends Socket> = {
     'error': [Error],
     'warning': [Error],
     'badSocketAuthToken': [S,Error,string],
@@ -113,7 +113,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * @description
      * The connected web socket clients.
      */
-    public readonly clients: Record<string, Socket> = {};
+    public readonly clients: Record<string, ES> = {};
 
     /**
      * This is the count of web socket request means invokes and transmit since the server is listening.
@@ -141,7 +141,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * The returned value will be transmitted to the client.
      * Promises are considered, and the connection is only ready when the promise is resolved.
      */
-    public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
+    public connectionHandler: (socket: ES) => Promise<any> | any = EMPTY_FUNCTION;
 
     /**
      * @description
@@ -293,8 +293,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         //On error, the socket will never be created and connected correctly.
         const zSocket = new Socket(this,socket,req);
 
-        (this as Writable<Server>).clientCount++;
-        this.clients[zSocket.id] = zSocket;
+        (this as Writable<Server<E,ES>>).clientCount++;
+        this.clients[zSocket.id] = zSocket as ES;
 
         try {
             if(this.socketMiddleware){
@@ -316,7 +316,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 catch (err) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
             }
 
-            const readyData = await this.connectionHandler(zSocket);
+            const readyData = await this.connectionHandler(zSocket as ES);
             const res = [this.options.pingInterval,authTokenState];
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
@@ -333,7 +333,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * @private
      */
     _removeSocket(socket: Socket) {
-        (this as Writable<Server>).clientCount--;
+        (this as Writable<Server<E,ES>>).clientCount--;
         delete this.clients[socket.id];
     }
 
@@ -391,7 +391,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     resetWsRequestCount()  {
-        (this as Writable<Server>).wsRequestCount = 0;
+        (this as Writable<Server<E,ES>>).wsRequestCount = 0;
     }
 
     /**
@@ -404,8 +404,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         this._wsServer.close();
         this.httpServer.close();
         Object.values(this.clients).forEach(client => client._terminate());
-        (this as Writable<Server>).clients = {};
-        (this as Writable<Server>).clientCount = 0;
+        (this as Writable<Server<E,ES>>).clients = {};
+        (this as Writable<Server<E,ES>>).clientCount = 0;
         this.internalBroker.terminate();
     }
 }
