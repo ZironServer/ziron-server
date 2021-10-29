@@ -133,6 +133,14 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * a larger proto chain and for the ability to add external variables into the constructor easily.
      */
     public socketConstructorExtension: (socket: Socket) => void = EMPTY_FUNCTION;
+
+    /**
+     * @description
+     * The connection handler will be called when a new socket is connected.
+     * The handler can be used to register receivers or procedures on the socket.
+     * The returned value will be transmitted to the client.
+     * Promises are considered, and the connection is only ready when the promise is resolved.
+     */
     public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
     /**
@@ -144,6 +152,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      */
     public httpRequestHandler?: (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => Promise<any> | any;
 
+    /**
+     * @description
+     * Specify a custom health check.
+     * This health check is used to process the value for the health endpoint.
+     * This endpoint could be used for docker health checks.
+     */
     public healthCheck: () => Promise<boolean> | boolean = () => true;
 
     //Middlewares
