@@ -28,19 +28,19 @@ declare module "http" {
     interface IncomingMessage {attachment?: any}
 }
 
-type LocalEvents = {
+type LocalEvents<S> = {
     'error': [Error],
     'warning': [Error],
-    'badSocketAuthToken': [Socket,Error,string],
-    'disconnection': [Socket,number,any],
+    'badSocketAuthToken': [S,Error,string],
+    'disconnection': [S,number,any],
 };
 
 type HandshakeMiddleware = (req: HTTP.IncomingMessage | {attachment?: any}) => Promise<void> | void;
-type SocketMiddleware = (socket: Socket) => Promise<void> | void;
-type AuthenticateMiddleware = (socket: Socket, authToken: object, signedAuthToken: string) => Promise<void> | void;
-type SubscribeMiddleware = (socket: Socket, channel: string) => Promise<void> | void;
-type PublishInMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
-type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Promise<void> | void;
+type SocketMiddleware<S extends Socket> = (socket: S) => Promise<void> | void;
+type AuthenticateMiddleware<S extends Socket> = (socket: S, authToken: object, signedAuthToken: string) => Promise<void> | void;
+type SubscribeMiddleware<S extends Socket> = (socket: S, channel: string) => Promise<void> | void;
+type PublishInMiddleware<S extends Socket> = (socket: S, channel: string, data: any) => Promise<void> | void;
+type PublishOutMiddleware<S extends Socket> = (socket: S, channel: string, data: any) => Promise<void> | void;
 
 /**
  * @description
@@ -50,7 +50,7 @@ type PublishOutMiddleware = (socket: Socket, channel: string, data: any) => Prom
  * All other HTTP requests will be answered with 426 (Upgrade Required),
  * but it is possible to provide a custom HTTP request handler.
  */
-export default class Server<E extends { [key: string]: any[]; } = {}> {
+export default class Server<E extends { [key: string]: any[]; } = {},ES extends Socket = Socket> {
 
     protected readonly options: Required<ServerOptions> = {
         id: uniqId(),
@@ -95,14 +95,14 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
     public readonly httpServer: HTTP.Server | HTTPS.Server;
     private readonly _wsServer: WebSocketServer;
 
-    protected emitter: (EventEmitter<LocalEvents> & EventEmitter<E>) = new EventEmitter();
-    public readonly once: (EventEmitter<LocalEvents> & EventEmitter<E>)['once'] = this.emitter.once.bind(this.emitter);
-    public readonly on: (EventEmitter<LocalEvents> & EventEmitter<E>)['on'] = this.emitter.on.bind(this.emitter);
-    public readonly off: (EventEmitter<LocalEvents> & EventEmitter<E>)['off'] = this.emitter.off.bind(this.emitter);
+    protected emitter: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>) = new EventEmitter();
+    public readonly once: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['once'] = this.emitter.once.bind(this.emitter);
+    public readonly on: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['on'] = this.emitter.on.bind(this.emitter);
+    public readonly off: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['off'] = this.emitter.off.bind(this.emitter);
     /**
      * @internal
      */
-    public readonly _emit: (EventEmitter<LocalEvents> & EventEmitter<E>)['emit'] = this.emitter.emit.bind(this.emitter);
+    public readonly _emit: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['emit'] = this.emitter.emit.bind(this.emitter);
 
     /**
      * @description
@@ -121,6 +121,18 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
      */
     public readonly wsRequestCount: number = 0;
 
+    /**
+     * @description
+     * Specify a socket constructor extension.
+     * This extension will be called in the socket constructor and
+     * can be used to add properties to the Socket instance.
+     * Use this extension only when you know what you are doing.
+     * It is also recommended to specify this new Socket type at the
+     * generic ES (extended socket) parameter of the Server class.
+     * This approach is implemented rather than a custom Socket class to prevent
+     * a larger proto chain and for the ability to add external variables into the constructor easily.
+     */
+    public socketConstructorExtension: (socket: Socket) => void = EMPTY_FUNCTION;
     public connectionHandler: (socket: Socket) => Promise<any> | any = EMPTY_FUNCTION;
 
     /**
@@ -136,11 +148,11 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
 
     //Middlewares
     public handshakeMiddleware: HandshakeMiddleware | undefined;
-    public socketMiddleware: SocketMiddleware | undefined;
-    public authenticateMiddleware: AuthenticateMiddleware | undefined;
-    public subscribeMiddleware: SubscribeMiddleware | undefined;
-    public publishInMiddleware: PublishInMiddleware | undefined;
-    public publishOutMiddleware: PublishOutMiddleware | undefined;
+    public socketMiddleware: SocketMiddleware<ES> | undefined;
+    public authenticateMiddleware: AuthenticateMiddleware<ES> | undefined;
+    public subscribeMiddleware: SubscribeMiddleware<ES> | undefined;
+    public publishInMiddleware: PublishInMiddleware<ES> | undefined;
+    public publishOutMiddleware: PublishOutMiddleware<ES> | undefined;
 
     /**
      * @internal
@@ -263,13 +275,16 @@ export default class Server<E extends { [key: string]: any[]; } = {}> {
         if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
         const signedToken = protocolIndexOfAt !== -1 ? protocolValue.substring(0,protocolIndexOfAt) : null;
 
+        //Socket constructor extension is used in the constructor.
+        //On error, the socket will never be created and connected correctly.
         const zSocket = new Socket(this,socket,req);
+
         (this as Writable<Server>).clientCount++;
         this.clients[zSocket.id] = zSocket;
 
         try {
             if(this.socketMiddleware){
-                try {await this.socketMiddleware(zSocket);}
+                try {await this.socketMiddleware(zSocket as ES);}
                 catch (err) {
                     if(err instanceof Block)
                         zSocket.disconnect(err.code,err.message || 'Connection was blocked by socket middleware');

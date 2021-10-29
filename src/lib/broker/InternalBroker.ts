@@ -25,7 +25,7 @@ export default class InternalBroker {
     private readonly _server: Server;
     private readonly _publishToPublisher: boolean;
 
-    constructor(server: Server) {
+    constructor(server: Server<any,any>) {
         this._server = server;
         this._publishToPublisher = server._options.publishToPublisher;
         this.exchange = new Exchange({

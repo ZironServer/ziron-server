@@ -115,7 +115,7 @@ export default class Socket
 
     private readonly _transport: Transport;
 
-    constructor(server: Server, socket: WebSocket, upgradeRequest: HTTP.IncomingMessage) {
+    constructor(server: Server<any,any>, socket: WebSocket, upgradeRequest: HTTP.IncomingMessage) {
         this._server = server;
         this._socket = socket;
 
@@ -145,6 +145,7 @@ export default class Socket
         this.flushBuffer = this._transport.flushBuffer.bind(this._transport);
         this.getBufferSize = this._transport.getBufferSize.bind(this._transport);
         socket.on('message',this._transport.emitMessage.bind(this._transport));
+        server.socketConstructorExtension(this);
     }
 
     public readonly transmit: Transport['transmit'];
