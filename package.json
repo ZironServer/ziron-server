@@ -21,7 +21,7 @@
     "base64id": "2.0.0",
     "uniqid": "^5.4.0",
     "emitix": "^2.0.0",
-    "@types/jsonwebtoken": "^8.5.5",
+    "@types/jsonwebtoken": "^8.5.6",
     "jsonwebtoken": "^8.5.1",
     "ziron-ws": "20.5.0",
     "uwebsocket-serve": "1.0.7",
