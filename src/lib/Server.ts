@@ -4,29 +4,39 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import ServerOptions from "./ServerOptions";
+import ServerOptions, {CompressionOptions, Compressor, COMPRESSOR_TO_INTERNAL_COMPRESSOR} from "./ServerOptions";
 import {createOriginsChecker, OriginsChecker} from "./OriginsChecker";
 import AuthEngine from "./AuthEngine";
 import Socket from "./Socket";
-import {ConnectionInfo, VerifyClientNext, WebSocketServer, WebSocket} from 'z-uws';
-import * as HTTP from "http";
-import * as HTTPS from "https";
+import {
+    SSLApp,
+    App,
+    TemplatedApp,
+    DISABLED,
+    HttpResponse,
+    HttpRequest,
+    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket
+} from 'ziron-ws';
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
 import {preprocessPath, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
-import Exchange from "./Exchange";
+import ChannelExchange from "./ChannelExchange";
 import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
-import {PortInUseError} from "./PortInUseError";
-import * as Http from "http";
-import * as url from "url";
-
-declare module "http" {
-    interface IncomingMessage {attachment?: any}
-}
+import {FailedToListenError} from "./FailedToListenError";
+import UpgradeRequest from "./UpgradeRequest";
+import {
+    BatchOption,
+    ComplexTypesOption,
+    DynamicGroupTransport,
+    PING,
+    Transport,
+    TransportOptions
+} from "ziron-engine";
+import {Http} from "./Http";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -35,12 +45,11 @@ type LocalEvents<S extends Socket> = {
     'disconnection': [S,number,any],
 };
 
-type HandshakeMiddleware = (req: HTTP.IncomingMessage | {attachment?: any}) => Promise<void> | void;
+type UpgradeMiddleware = (req: UpgradeRequest) => Promise<void> | void;
 type SocketMiddleware<S extends Socket> = (socket: S) => Promise<void> | void;
 type AuthenticateMiddleware<S extends Socket> = (socket: S, authToken: object, signedAuthToken: string) => Promise<void> | void;
 type SubscribeMiddleware<S extends Socket> = (socket: S, channel: string) => Promise<void> | void;
 type PublishInMiddleware<S extends Socket> = (socket: S, channel: string, data: any) => Promise<void> | void;
-type PublishOutMiddleware<S extends Socket> = (socket: S, channel: string, data: any) => Promise<void> | void;
 
 /**
  * @description
@@ -52,29 +61,50 @@ type PublishOutMiddleware<S extends Socket> = (socket: S, channel: string, data:
  */
 export default class Server<E extends { [key: string]: any[]; } = {},ES extends Socket = Socket> {
 
-    protected readonly options: Required<ServerOptions> = {
+    /**
+     * @internal
+     * Internal access for the socket.
+     */
+    readonly options: Required<ServerOptions> = {
         id: uniqId(),
-        maxPayload: null,
-        perMessageDeflate: null,
+        maxPayloadSize: 4194304,
+        maxBackpressure: 6291456,
         socketChannelLimit: 1000,
         allowClientPublish: true,
         publishToPublisher: true,
-        ackTimeout: 7000,
+        responseTimeout: 7000,
         pingInterval: 8000,
         origins: null,
         port: 3000,
         path: '/',
         auth: {},
+        compression: {},
         healthEndpoint: true,
         tls: null,
-        maxHttpHeaderSize: null
+        binaryContentPacketTimeout: 10000,
+        streamsPerPackageLimit: 20,
+        chunksCanContainStreams: false
     };
+
+    private readonly _compressionOptions: Required<CompressionOptions> = {
+        active: true,
+        compressor: Compressor.DedicatedCompressor4KB,
+        alwaysCompressBatches: false,
+        minBytes: 104857,
+        minLength: 20000,
+    }
 
     /**
      * @internal
      * Internal access for the socket.
      */
-    public readonly _options: Required<ServerOptions>;
+    readonly transportOptions: TransportOptions;
+
+    /**
+     * @internal
+     * Internal access for the socket.
+     */
+    readonly lowSendBackpressureMark: number;
 
     public readonly originsChecker: OriginsChecker;
     public readonly auth: AuthEngine;
@@ -92,8 +122,15 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
-    public readonly httpServer: HTTP.Server | HTTPS.Server;
-    private readonly _wsServer: WebSocketServer;
+    private _pingTicker: NodeJS.Timeout;
+
+    /**
+     * @internal
+     */
+    readonly _app: TemplatedApp;
+    private _listenToken?: us_listen_socket | null;
+    private _startListenPromise?: Promise<void> | null;
+    private readonly _groupTransport?: DynamicGroupTransport;
 
     protected emitter: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>) = new EventEmitter();
     public readonly once: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['once'] = this.emitter.once.bind(this.emitter);
@@ -145,15 +182,6 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     /**
      * @description
-     * Set this property to handle HTTP requests.
-     * All HTTP requests (except health endpoint requests) will be answered
-     * with 426 (Upgrade Required) when this property is undefined.
-     * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
-     */
-    public httpRequestHandler?: (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => Promise<any> | any;
-
-    /**
-     * @description
      * Specify a custom health check.
      * This health check is used to process the value for the health endpoint.
      * This endpoint could be used for docker health checks.
@@ -161,12 +189,11 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     public healthCheck: () => Promise<boolean> | boolean = () => true;
 
     //Middlewares
-    public handshakeMiddleware: HandshakeMiddleware | undefined;
+    public upgradeMiddleware: UpgradeMiddleware | undefined;
     public socketMiddleware: SocketMiddleware<ES> | undefined;
     public authenticateMiddleware: AuthenticateMiddleware<ES> | undefined;
     public subscribeMiddleware: SubscribeMiddleware<ES> | undefined;
     public publishInMiddleware: PublishInMiddleware<ES> | undefined;
-    public publishOutMiddleware: PublishOutMiddleware<ES> | undefined;
 
     /**
      * @internal
@@ -176,7 +203,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     protected readonly internalBroker: InternalBroker;
 
-    public exchange: Exchange;
+    public readonly http: Http;
+    public readonly channels: ChannelExchange;
     /**
      * @description
      * Boolean that indicates if the server should reject web socket handshakes.
@@ -187,21 +215,68 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     constructor(options: ServerOptions = {}) {
         Object.assign(this.options,options);
-        this._options = this.options;
-
         this.options.path = preprocessPath(this.options.path);
+        Object.assign(this._compressionOptions,options.compression);
+        this.transportOptions = this._createTransportOptions();
+        this.lowSendBackpressureMark = Math.trunc(0.5 * this.options.maxBackpressure);
 
         this.auth = new AuthEngine(this.options.auth);
+
         this.originsChecker = createOriginsChecker(this.options.origins);
 
         this.internalBroker = new InternalBroker(this);
         this._internalBroker = this.internalBroker;
-        this.exchange = this.internalBroker.exchange;
+        this.channels = this.internalBroker.exchange;
 
         this._setUpSocketChLimit();
-        this.httpServer = this._createHttpServer();
-        this._wsServer = this._setUpWsServer();
+        this._app = this._setUpApp();
+        this.http = this._app;
+        this._groupTransport = this._createGroupTransport();
+        this.transmitToGroup = this._groupTransport.transmit.bind(this._groupTransport);
+        this._startPingInterval();
+        this._startAuthExpireCheck();
+        if(this.options.healthEndpoint) this._createHealthCheckEndpoint();
+    }
 
+    private _createGroupTransport() {
+        return new DynamicGroupTransport({
+            send: (group, msg, binary, batch) => {
+                this._app.publish("G"+group,msg,binary,this._shouldCompress(msg,binary,batch));
+            },
+            isConnected: () => true
+        },DynamicGroupTransport.buildOptions({
+            freeBufferMaxPoolSize: 200,
+            ...this.transportOptions
+        }));
+    }
+
+    private _createTransportOptions(): TransportOptions {
+        return Transport.buildOptions({
+            maxBufferSize: Math.trunc(0.7 * this.options.maxBackpressure),
+            limitBatchBinarySize: Math.max(Math.ceil(0.7 * this.options.maxPayloadSize),200),
+            limitBatchStringLength: Math.max(Math.ceil(0.7 * (this.options.maxPayloadSize / 4)),2000),
+            responseTimeout: this.options.responseTimeout,
+            binaryContentPacketTimeout: this.options.binaryContentPacketTimeout,
+            streamsPerPackageLimit: this.options.streamsPerPackageLimit,
+            chunksCanContainStreams: this.options.chunksCanContainStreams,
+            streamsEnabled: true
+        });
+    }
+
+    /**
+     * @internal
+     */
+    public readonly _shouldCompress: (msg?: ArrayBuffer | string,binary?: boolean,batch?: boolean) => boolean = () => false;
+
+    private _loadCompressionOptions() {
+        if(!this._compressionOptions.active) return;
+        const minBytes = this._compressionOptions.minBytes;
+        const minLength = this._compressionOptions.minLength;
+        (this as Writable<Server<any,any>>)._shouldCompress = this._compressionOptions.alwaysCompressBatches ?
+            (msg?: any,binary?: boolean,batch?: boolean) =>
+                batch || (binary ? (msg as ArrayBuffer).byteLength >= minBytes : (msg as string).length >= minLength) :
+            (msg?: any,binary?: boolean) =>
+                binary ? (msg as ArrayBuffer).byteLength >= minBytes : (msg as string).length >= minLength;
     }
 
     private _setUpSocketChLimit() {
@@ -212,91 +287,116 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         else this._checkSocketChLimitReached = () => false;
     }
 
-    private _setUpWsServer() {
-        const wsServer = new WebSocketServer({
-            server: this.httpServer,
-            verifyClient: this._verifyClient.bind(this),
-            path: this.options.path,
-            strictPath: false,
-            ...(this.options.maxPayload != null ? {maxPayload: this.options.maxPayload} : {}),
-            ...(this.options.perMessageDeflate != null ? {perMessageDeflate: this.options.perMessageDeflate} : {}),
+    private _setUpApp(): TemplatedApp {
+        const tls = this.options.tls;
+        return (tls ? SSLApp({
+            key_file_name: tls.keyFileName,
+            cert_file_name: tls.certFileName,
+            passphrase: tls.passphrase,
+            dh_params_file_name: tls.dhParamsFileName,
+            ssl_prefer_low_memory_usage: tls.releaseBuffersMode
+        }) : App()).ws("/*",{
+            compression: this._compressionOptions.active ?
+                COMPRESSOR_TO_INTERNAL_COMPRESSOR[this._compressionOptions.compressor] : DISABLED,
+                maxPayloadLength: this.options.maxPayloadSize,
+                maxBackpressure: this.options.maxBackpressure,
+                idleTimeout: this.options.pingInterval * 2,
+                upgrade: this._handleUpgrade.bind(this),
+                open: this._handleWsOpen.bind(this),
+                message: Server._handleWsMessage.bind(this),
+                drain: Server._handleWsDrain.bind(this),
+                close: Server._handleWsClose.bind(this),
+                ...({
+                    sendPingsAutomatically: 0,
+                } as any)
         });
-        wsServer.startAutoPing(this.options.pingInterval,true);
+    }
+
+    private _startPingInterval() {
+        this._pingTicker = setInterval(() => {
+            this._app.publish('broadcast',PING,true);
+        },this.options.pingInterval);
+    }
+
+    private _startAuthExpireCheck() {
         this._authTokenExpireCheckerTicker = setInterval(() => {
             for(const id in this.clients) { // noinspection JSUnfilteredForInLoop
                 this.clients[id]._checkAuthTokenExpire();
             }
         },this.options.auth.expireCheckInterval ?? 12000);
-        wsServer.on('error',this._handleServerError.bind(this));
-        wsServer.on('connection',this._handleSocketConnection.bind(this));
-        return wsServer;
     }
 
-    private _createHttpServer() {
-        const httpOptions: Http.ServerOptions = this.options.maxHttpHeaderSize != null ?
-            {maxHeaderSize: this.options.maxHttpHeaderSize} : {};
-        const httpServer = this.options.tls != null ?
-            HTTPS.createServer({...httpOptions,...this.options.tls}) :
-            HTTP.createServer(httpOptions);
-
-        const healthPath = `${this.options.path}/health`;
-        httpServer.on("request",async (req: HTTP.IncomingMessage, res: HTTP.ServerResponse) => {
-            if(this.options.healthEndpoint && req.method === 'GET' &&
-                url.parse(req.url || "").pathname === healthPath)
-            {
-                let healthy: boolean = false;
-                try {healthy = await this.healthCheck()}
-                catch (err) {this._emit('error', err)}
-                res.writeHead(healthy ? 200 : 500, {'Content-Type': 'text/html'});
-                res.end(healthy ? 'Healthy' : 'Unhealthy');
-            }
-            else if(this.httpRequestHandler) this.httpRequestHandler(req,res);
-            else {
-                const body = HTTP.STATUS_CODES[426];
-                res.writeHead(426, {
-                    'Content-Length': body?.length || 0,
-                    'Content-Type': 'text/plain'
-                });
-                res.end(body);
-            }
-        })
-        httpServer.on('error', (err: Error): void => {
-            this._emit("error",err);
-        });
-        return httpServer;
+    private static _abortConnection(res: HttpResponse, code: number, message: string): void {
+        res.end(`HTTP/1.1 ${code} ${message}\r\n\r\n`,true);
     }
 
-    public async listen(): Promise<void> {
-        if(!this.httpServer.listening) return new Promise((res, rej) => {
-            const port = this.options.port;
-            const portErrorListener = (err) => {
-                if(err.code === 'EADDRINUSE') rej(new PortInUseError(port));
-            };
-            this.httpServer.once("error", portErrorListener);
-            this.httpServer.listen(port,() => {
-                this.httpServer.off("error",portErrorListener);
-                res();
-            });
-        });
+    private _handleUpgrade(res: HttpResponse,req: HttpRequest,context: us_socket_context_t) {
+        if(this.refuseConnections) return Server._abortConnection(res,403,'Client verification failed');
+
+        const reqPath = req.getUrl().split('?')[0].split('#')[0];
+        if(reqPath !== this.options.path && reqPath !== this.options.path + '/')
+            return Server._abortConnection(res,400, 'URL not supported');
+
+        const origin = req.getHeader("origin");
+        if(!this.originsChecker(origin)) {
+            const err = new ServerProtocolError('Failed to authorize socket handshake - Invalid origin: ' + origin);
+            this._emit('warning', err);
+            return Server._abortConnection(res,403,err.message);
+        }
+
+        const upgradeRequest = new UpgradeRequest(req);
+
+        if(upgradeRequest.headers.secWebSocketProtocol !== 'ziron')
+            Server._abortConnection(res,4800,'Unsupported protocol')
+
+        const upgradeAborted = {aborted: false};
+        res.onAborted(() => upgradeAborted.aborted = true);
+
+        const {
+            secWebSocketKey,
+            secWebSocketProtocol,
+            secWebSocketExtensions
+        } = upgradeRequest.headers;
+
+        if(this.upgradeMiddleware){
+            (async () => {
+                try {
+                    await this.upgradeMiddleware!(upgradeRequest);
+                    res.upgrade({req: upgradeRequest}, secWebSocketKey,
+                        secWebSocketProtocol, secWebSocketExtensions, context);
+                }
+                catch (err) {
+                    if(err instanceof Block)
+                        Server._abortConnection(res, err.code, err.message || 'Handshake was blocked by handshake middleware');
+                    else {
+                        this._emit('error', err);
+                        Server._abortConnection(res, err.code ?? 403,
+                            'Handshake was blocked by handshake middleware');
+                    }
+                }
+            })();
+        }
+        else res.upgrade({req: upgradeRequest}, secWebSocketKey,
+            secWebSocketProtocol, secWebSocketExtensions, context);
     }
 
-    private async _handleSocketConnection(socket: WebSocket, req: HTTP.IncomingMessage) {
-        const protocolHeader = req.headers['sec-websocket-protocol'];
-        const protocolValue = (Array.isArray(protocolHeader) ? protocolHeader[0] : protocolHeader) || "";
+    private async _handleWsOpen(ws: WebSocket) {
 
-        const protocolIndexOfAt = protocolValue.indexOf('@');
-        const protocolName = protocolIndexOfAt === -1 ? protocolValue : protocolValue.substring(protocolIndexOfAt + 1);
-        if(protocolName !== 'ziron') return socket.close(4800,'Unsupported protocol');
-        const signedToken = protocolIndexOfAt !== -1 ? protocolValue.substring(0,protocolIndexOfAt) : null;
-
+        let zSocket: Socket;
         //Socket constructor extension is used in the constructor.
         //On error, the socket will never be created and connected correctly.
-        const zSocket = new Socket(this,socket,req);
+        try {zSocket = new Socket(this,ws);}
+        catch (err) {return ws.end(1011,'Unknown connection error');}
+
+        ws.zSocket = zSocket;
+        ws.subscribe("broadcast");
 
         (this as Writable<Server<E,ES>>).clientCount++;
         this.clients[zSocket.id] = zSocket as ES;
 
         try {
+            const signedToken = zSocket.upgradeRequest.signedToken;
+
             if(this.socketMiddleware){
                 try {await this.socketMiddleware(zSocket as ES);}
                 catch (err) {
@@ -317,7 +417,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             }
 
             const readyData = await this.connectionHandler(zSocket as ES);
-            const res = [this.options.pingInterval,authTokenState];
+            const res = [this.options.pingInterval,this.options.maxPayloadSize,authTokenState];
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
@@ -325,6 +425,55 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             this._emit('error', err);
             zSocket.disconnect(err.code ?? 1011,'Unknown connection error');
         }
+    }
+
+    private static _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
+        const zSocket: Socket = ws.zSocket;
+        if(zSocket) zSocket._emitMessage(isBinary ? message : Buffer.from(message).toString());
+    }
+
+    private static _handleWsDrain(ws: WebSocket) {
+        const zSocket: Socket = ws.zSocket;
+        if(zSocket) zSocket._emitDrain();
+    }
+
+    private static _handleWsClose(ws: WebSocket, code: number, message: ArrayBuffer) {
+        const zSocket: Socket = ws.zSocket;
+        if(zSocket) zSocket._emitClose(code,Buffer.from(message).toString());
+    }
+
+    private _createHealthCheckEndpoint() {
+        const healthPath = `${this.options.path}/health`;
+        this.http.get(healthPath,async (res) => {
+            res.onAborted(() => {res.aborted = true;});
+
+            let healthy: boolean = false;
+            try {healthy = await this.healthCheck()}
+            catch (err) {this._emit('error', err)}
+
+            if (res.aborted) return;
+            res.cork(() => {
+                res.writeStatus(healthy ? "200" : "500");
+                res.writeHeader('Content-Type','text/html');
+                res.end(healthy ? 'Healthy' : 'Unhealthy');
+            });
+        })
+    }
+
+    public async listen(): Promise<void> {
+        if(this._listenToken != null) return Promise.resolve();
+        if(!this._startListenPromise)
+            return this._startListenPromise = new Promise<void>((res, rej) => {
+                const port = this.options.port;
+                this._app.listen(port,(token) => {
+                    if(token) {
+                        this._listenToken = token;
+                        res();
+                    }
+                    else rej(new FailedToListenError(port));
+                    this._startListenPromise = null;
+                });
+            });
     }
 
     /**
@@ -348,50 +497,19 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         this._emit('error',typeof error === 'string' ? new ServerProtocolError(error) : error);
     }
 
-    private _verifyClient(info: ConnectionInfo, next: VerifyClientNext) {
-        if(this.refuseConnections) return next(false,403);
-        if(!this.originsChecker(info.origin)) {
-            const err = new ServerProtocolError('Failed to authorize socket handshake - Invalid origin: ' + origin);
-            this._emit('warning', err);
-            return next(false, 403, err.message);
-        }
-
-        const req = info.req;
-        const url = req.url || '';
-        const urlIndexOfSearch = url.indexOf('?');
-        const queryArgs = urlIndexOfSearch !== -1 ? url.substring(url.indexOf('?') + 1) : '';
-        if(queryArgs.length){
-            try {
-                const parsedArgs = JSON.parse(decodeURIComponent(queryArgs));
-                if(parsedArgs) req.attachment = parsedArgs;
-            }
-            catch (_) {}
-        }
-
-        if(this.handshakeMiddleware){
-            (async () => {
-                try {
-                    await this.handshakeMiddleware!(req);
-                    next(true);
-                }
-                catch (err) {
-                    if(err instanceof Block) next(false, err.code, err.message || 'Handshake was blocked by handshake middleware');
-                    else {
-                        this._emit('error', err);
-                        next(false, err.code ?? 403, 'Handshake was blocked by handshake middleware');
-                    }
-                }
-            })();
-        }
-        else next(true);
-    }
-
     getInternalSubscriptions(): string[] {
-        return this.internalBroker.getSubscriptionList();
+        return this.internalBroker.getSubscriptions();
     }
 
     resetWsRequestCount()  {
         (this as Writable<Server<E,ES>>).wsRequestCount = 0;
+    }
+
+    stopListen() {
+        if(this._listenToken) {
+            us_listen_socket_close(this._listenToken);
+            this._listenToken = null;
+        }
     }
 
     /**
@@ -401,8 +519,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * [Use this method only when you know what you do.]
      */
     terminate() {
-        this._wsServer.close();
-        this.httpServer.close();
+        this.stopListen();
         Object.values(this.clients).forEach(client => client._terminate());
         (this as Writable<Server<E,ES>>).clients = {};
         (this as Writable<Server<E,ES>>).clientCount = 0;
