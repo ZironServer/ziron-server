@@ -8,7 +8,6 @@ import {UpgradeHeaders} from "./UpgradeRequest";
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
-export const distinctArrayFilter = <T>(v: T, i: number, a: T[]) => a.indexOf(v) === i;
 
 export function tryGetClientIpFromHeaders(headers: UpgradeHeaders): string | undefined {
     const xForwardedFor = headers.xForwardedFor;
