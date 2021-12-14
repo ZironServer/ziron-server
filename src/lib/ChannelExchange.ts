@@ -9,9 +9,9 @@ import Socket from "./Socket";
 
 type PublishEmitter = EventEmitter<{[key: string]: [any,boolean,boolean]}>;
 
-export default class Exchange {
+export default class ChannelExchange {
 
-    public readonly subscriptions: ReadonlyArray<string>;
+    public readonly subscriptions: ReadonlySet<string>;
     public subscribe: (channel: string) => void;
     public unsubscribe: (channel: string) => void;
     public publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
@@ -27,7 +27,7 @@ export default class Exchange {
     public readonly _emitPublish: PublishEmitter['emit'] = this._publishEmitter.emit.bind(this._publishEmitter);
 
     constructor(connector: {
-        subscriptions: string[],
+        subscriptions: ReadonlySet<string>,
         subscribe: (channel: string) => void,
         unsubscribe: (channel: string) => void,
         publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
