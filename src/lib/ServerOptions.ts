@@ -5,7 +5,127 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import {AuthOptions} from "./AuthEngine";
-import * as tls from "tls";
+import {
+    RecognizedString,
+    CompressOptions,
+    DEDICATED_COMPRESSOR_3KB,
+    DEDICATED_COMPRESSOR_4KB,
+    DEDICATED_COMPRESSOR_8KB,
+    DEDICATED_COMPRESSOR_16KB,
+    DEDICATED_COMPRESSOR_32KB,
+    DEDICATED_COMPRESSOR_64KB,
+    DEDICATED_COMPRESSOR_128KB,
+    DEDICATED_COMPRESSOR_256KB,
+    SHARED_COMPRESSOR
+} from "ziron-ws";
+
+export const COMPRESSOR_TO_INTERNAL_COMPRESSOR: Record<Compressor,CompressOptions> = {
+    [Compressor.SharedCompressor]: SHARED_COMPRESSOR,
+    [Compressor.DedicatedCompressor3KB]: DEDICATED_COMPRESSOR_3KB,
+    [Compressor.DedicatedCompressor4KB]: DEDICATED_COMPRESSOR_4KB,
+    [Compressor.DedicatedCompressor8KB]: DEDICATED_COMPRESSOR_8KB,
+    [Compressor.DedicatedCompressor16KB]: DEDICATED_COMPRESSOR_16KB,
+    [Compressor.DedicatedCompressor32KB]: DEDICATED_COMPRESSOR_32KB,
+    [Compressor.DedicatedCompressor64KB]: DEDICATED_COMPRESSOR_64KB,
+    [Compressor.DedicatedCompressor128KB]: DEDICATED_COMPRESSOR_128KB,
+    [Compressor.DedicatedCompressor256KB]: DEDICATED_COMPRESSOR_256KB
+};
+
+export const enum Compressor {
+    /**
+     * @description
+     * Zero overhead memory compression.
+     */
+    SharedCompressor,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 3 KB of memory per socket.
+     */
+    DedicatedCompressor3KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 4 KB of memory per socket.
+     */
+    DedicatedCompressor4KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 8 KB of memory per socket.
+     */
+    DedicatedCompressor8KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 16 KB of memory per socket.
+     */
+    DedicatedCompressor16KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 32 KB of memory per socket.
+     */
+    DedicatedCompressor32KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 64 KB of memory per socket.
+     */
+    DedicatedCompressor64KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 128 KB of memory per socket.
+     */
+    DedicatedCompressor128KB,
+    /**
+     * @description
+     * A sliding dedicated compress window that requires 256 KB of memory per socket.
+     */
+    DedicatedCompressor256KB,
+}
+
+export interface CompressionOptions {
+    /**
+     * @description
+     * Activates or deactivates compression.
+     * @default true
+     */
+    active?: boolean;
+    /**
+     * @description
+     * Defines the compressor used to compress messages.
+     * @default DedicatedCompressor4KB
+     */
+    compressor?: Compressor;
+    /**
+     * @description
+     * Defines if batch packets should always be compressed.
+     * @default false
+     */
+    alwaysCompressBatches?: boolean;
+    /**
+     * @description
+     * Specifies at which byte size binary packets should be compressed.
+     * @default 104857
+     */
+    minBytes?: number;
+    /**
+     * @description
+     * Specifies at which string length text packets should be compressed.
+     * @default 20000
+     */
+    minLength?: number;
+}
+
+export interface TLSOptions {
+    keyFileName?: RecognizedString;
+    certFileName?: RecognizedString;
+    passphrase?: RecognizedString;
+    dhParamsFileName?: RecognizedString;
+    /**
+     * @description
+     * In this mode, the read buffers or write buffers memory for a
+     * given SSL will be released when we no longer need them.
+     * That mode can save around 34k per idle SSL connection and
+     * has no effect on SSL v2 connections or DTLS connections.
+     */
+    releaseBuffersMode?: boolean;
+}
 
 export default interface ServerOptions {
     /**
@@ -28,6 +148,7 @@ export default interface ServerOptions {
          */
         expireCheckInterval?: number,
     },
+    compression?: CompressionOptions;
     /**
      * @description
      * Specifies if the client is allowed to publish into channels.
@@ -54,10 +175,13 @@ export default interface ServerOptions {
     socketChannelLimit?: number | null,
     /**
      * @description
-     * Specifies the default ack timeout.
+     * Defines the default timeout in milliseconds for
+     * receiving the response of an invoke.
+     * Notice that an individual response timeout can be specified for
+     * an invoke that overrides this option value.
      * @default 7000
      */
-    ackTimeout?: number,
+    responseTimeout?: number,
     /**
      * @description
      * Specifies the interval in that the server pings the client sockets.
@@ -68,14 +192,14 @@ export default interface ServerOptions {
     /**
      * @description
      * Specifies the maximum allowed message size in bytes.
-     * @default 16777216
+     * @default 4194304 (4 MB)
      */
-    maxPayload?: number | null,
+    maxPayloadSize?: number,
     /**
      * @description
-     * Enable/disable permessage-deflate.
+     * @default 6291456 (6 MB)
      */
-    perMessageDeflate?: boolean | { serverNoContextTakeover: boolean; } | null,
+    maxBackpressure?: number,
     /**
      * The port where the server is listening.
      * @default 3000
@@ -120,12 +244,32 @@ export default interface ServerOptions {
     healthEndpoint?: boolean;
     /**
      * Defines TLS options.
-     * When providing these options, an HTTPS server will be created instead of an HTTP server.
+     * Provide these options to enable TLS 1.3 messaging encryption.
      * @default null
      */
-    tls?: (tls.SecureContextOptions & tls.TlsOptions) | null;
+    tls?: TLSOptions | null;
     /**
-     * Overrides the default max HTTP requests header length in bytes.
+     * @description
+     * Advanced option.
+     * Defines the timeout in milliseconds for receiving
+     * the referenced binary content packet of a text packet.
+     * @default 10000
      */
-    maxHttpHeaderSize?: number | null;
+    binaryContentPacketTimeout?: number;
+    /**
+     * @description
+     * Advanced option.
+     * This option defines how many
+     * streams are allowed in a package.
+     * @default 20
+     */
+    streamsPerPackageLimit?: number;
+    /**
+     * @description
+     * Advanced option.
+     * This option species if chunks
+     * of streams can contain streams.
+     * @default false
+     */
+    chunksCanContainStreams?: boolean;
 }
