@@ -460,6 +460,39 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         })
     }
 
+    /**
+     * @description
+     * Sends a transmit to a group.
+     * Instead of channels, groups can only be accessed and controlled from the server-side and
+     * messages are not shared across multiple server instances.
+     * Groups don't have their own special protocol and can be used to send a standard
+     * transmit optimized to multiple sockets of a group.
+     * Additionally, groups support buffering transmits and send them in batches.
+     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * so binary data is supported.
+     * @param group
+     * @param receiver
+     * @param data
+     * @param options
+     */
+    public readonly transmitToGroup: (group: string, receiver: string, data: any, options: ComplexTypesOption & BatchOption) => void;
+
+    /**
+     * @description
+     * Returns the member count of a specific group from this server instance.
+     * Instead of channels, groups can only be accessed and controlled from the server-side and
+     * messages are not shared across multiple server instances.
+     * Groups don't have their own special protocol and can be used to send a standard
+     * transmit optimized to multiple sockets of a group.
+     * Additionally, groups support buffering transmits and send them in batches.
+     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * so binary data is supported.
+     * @param group
+     */
+    public getGroupMemberCount(group: string): number {
+       return this._app.numSubscribers("G"+group);
+    }
+
     public async listen(): Promise<void> {
         if(this._listenToken != null) return Promise.resolve();
         if(!this._startListenPromise)
