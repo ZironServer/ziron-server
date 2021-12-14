@@ -8,27 +8,25 @@ import Socket from "../Socket";
 import {Transport} from "ziron-engine";
 import {InternalServerTransmits} from "ziron-events";
 import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBrokerClient";
-import Exchange from "../Exchange";
+import ChannelExchange from "../ChannelExchange";
 import Server from "../Server";
-import {Block} from "../MiddlewareUtils";
-import {distinctArrayFilter} from "../Utils";
 
 export default class InternalBroker {
 
     externalBrokerClient: ExternalBrokerClient = defaultExternalBrokerClient;
 
-    public readonly exchange: Exchange;
+    public readonly exchange: ChannelExchange;
 
-    private readonly channels: Record<string,Socket[]> = {};
-    private readonly exchangeChannels: string[] = [];
+    private readonly exchangeChannels: Set<string> = new Set();
+    private readonly socketSubscriptions: Set<string> = new Set();
 
     private readonly _server: Server;
     private readonly _publishToPublisher: boolean;
 
     constructor(server: Server<any,any>) {
         this._server = server;
-        this._publishToPublisher = server._options.publishToPublisher;
-        this.exchange = new Exchange({
+        this._publishToPublisher = server.options.publishToPublisher;
+        this.exchange = new ChannelExchange({
             subscriptions: this.exchangeChannels,
             subscribe: this._exchangeSubscribe.bind(this),
             unsubscribe: this._exchangeUnsubscribe.bind(this),
@@ -36,8 +34,8 @@ export default class InternalBroker {
         });
     }
 
-    getSubscriptionList(): string[] {
-        return [...this.exchangeChannels,...Object.keys(this.channels)].filter(distinctArrayFilter);
+    getSubscriptions(): string[] {
+        return Array.from(new Set([...this.exchangeChannels,...this.socketSubscriptions]).values());
     }
 
     processExternalPublish(channel: string, data: any, complexDataType: boolean) {
@@ -45,43 +43,37 @@ export default class InternalBroker {
     }
 
     private _exchangeSubscribe(channel: string) {
-        if(!this.exchangeChannels.includes(channel)) {
-            this.exchangeChannels.push(channel);
-            if(!this.channels[channel])
+        if(!this.exchangeChannels.has(channel)) {
+            this.exchangeChannels.add(channel);
+            if(!this.socketSubscriptions.has(channel))
                 this.externalBrokerClient.subscribe(channel);
         }
     }
 
     private _exchangeUnsubscribe(channel: string) {
-        const index = this.exchangeChannels.indexOf(channel);
-        if(index !== -1) {
-            this.exchangeChannels.splice(index,1);
-            if(!this.channels[channel])
+        if(this.exchangeChannels.delete(channel)) {
+            if(!this.socketSubscriptions.has(channel))
                 this.externalBrokerClient.unsubscribe(channel);
         }
     }
 
     socketSubscribe(socket: Socket, channel: string) {
-        let sockets = this.channels[channel];
-        if(!sockets) {
-            this.channels[channel] = sockets = [];
-            if(!this.exchangeChannels.includes(channel))
+        if(!this.socketSubscriptions.has(channel)) {
+            if(!this.exchangeChannels.has(channel))
                 this.externalBrokerClient.subscribe(channel);
+            this.socketSubscriptions.add(channel);
         }
-        if(!sockets.includes(socket)) sockets.push(socket);
+        socket._socket.subscribe("C" + channel);
     }
 
     socketUnsubscribe(socket: Socket, channel: string) {
-        const sockets = this.channels[channel];
-        if(sockets) {
-            const index = sockets.indexOf(socket);
-            if(index !== -1) {
-                sockets.splice(index,1);
-                if(sockets.length === 0) {
-                    delete this.channels[channel];
-                    if(!this.exchangeChannels.includes(channel))
-                        this.externalBrokerClient.unsubscribe(channel);
-                }
+        if(this.socketSubscriptions.has(channel)) {
+            const internalCh = "C" + channel;
+            socket._socket.unsubscribe(internalCh);
+            if(this._server._app.numSubscribers(internalCh) <= 0) {
+                this.socketSubscriptions.delete(channel);
+                if(!this.exchangeChannels.has(channel))
+                    this.externalBrokerClient.unsubscribe(channel);
             }
         }
     }
@@ -92,34 +84,19 @@ export default class InternalBroker {
             this._publishToPublisher ? undefined : publisher);
     }
 
-    _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, skipSocket?: Socket) {
-        if(this.exchangeChannels.includes(channel)) this.exchange._emitPublish(channel,data,external,processComplexTypes);
-        const sockets = this.channels[channel];
-        if(sockets) {
-            const preparedPackage = Transport.prepareMultiTransmit
+    _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, publisher?: Socket) {
+        if(this.exchangeChannels.has(channel)) this.exchange._emitPublish(channel,data,external,processComplexTypes);
+        if(this.socketSubscriptions.has(channel)) {
+            const pack = Transport.prepareMultiTransmit
                 (InternalServerTransmits.Publish,[channel,data],{processComplexTypes});
-            if(!this._server.publishOutMiddleware) {
-                const len = sockets.length;
-                // optimization tweak
-                if(skipSocket) {
-                    for(let i = 0; i < len; i++) {
-                        if(sockets[i] === skipSocket) continue;
-                        sockets[i].sendPreparedPackage(preparedPackage);
-                    }
-                }
-                else for(let i = 0; i < len; i++) sockets[i].sendPreparedPackage(preparedPackage);
-            }
-            else {
-                const middleware = this._server.publishOutMiddleware;
-                sockets.forEach(async (socket) => {
-                    if(socket === skipSocket) return;
-                    try {
-                        await middleware(socket,channel,data);
-                        socket.sendPreparedPackage(preparedPackage);
-                    }
-                    catch (err) {if(!(err instanceof Block)) this._server._emit('error', err);}
-                })
-            }
+            const source = publisher ? publisher._socket : this._server._app,
+                len = pack.length,
+                internalChannel = "C" + channel;
+
+            source.publish(internalChannel,pack[0],
+                false,this._server._shouldCompress(pack[0]));
+            if(len > 1) source.publish(internalChannel,pack[1]!,
+                true,this._server._shouldCompress(pack[1]!,true));
         }
     }
 
