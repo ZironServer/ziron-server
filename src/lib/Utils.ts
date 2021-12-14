@@ -4,22 +4,21 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import * as Http from "http";
+import {UpgradeHeaders} from "./UpgradeRequest";
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
 export const distinctArrayFilter = <T>(v: T, i: number, a: T[]) => a.indexOf(v) === i;
 
-export function tryGetClientIpFromHeaders(req: Http.IncomingMessage): string | undefined {
-    const xForwarded = req.headers['x-forwarded-for'];
-    if(typeof xForwarded === 'string') return xForwarded.split(',')[0].trim();
+export function tryGetClientIpFromHeaders(headers: UpgradeHeaders): string | undefined {
+    const xForwardedFor = headers.xForwardedFor;
+    if(xForwardedFor) return xForwardedFor.split(',')[0].trim();
     return undefined;
 }
 
-export function tryGetClientPortFromHeaders(req: Http.IncomingMessage): number | undefined {
-    const xForwarded = req.headers['x-forwarded-port'];
-    if(typeof xForwarded === 'string') return parseInt(xForwarded.split(',')[0].trim())
-        || undefined;
+export function tryGetClientPortFromHeaders(headers: UpgradeHeaders): number | undefined {
+    const xForwardedPort = headers.xForwardedPort;
+    if(xForwardedPort) return parseInt(xForwardedPort.split(',')[0].trim()) || undefined;
     return undefined;
 }
 
