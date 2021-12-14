@@ -13,10 +13,8 @@ import {
     socketProtocolIgnoreStatuses,
 } from "ziron-errors";
 import Server from "./Server";
-import {WebSocket} from "z-uws";
-import * as HTTP from "http";
 import isIp = require('is-ip');
-import {tryGetClientIpFromHeaders, tryGetClientPortFromHeaders, Writable} from "./Utils";
+import {tryGetClientIpFromHeaders, Writable} from "./Utils";
 import {
     BadConnectionType,
     Transport,
@@ -29,6 +27,8 @@ import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmi
 import {SignOptions} from "jsonwebtoken";
 import {Block} from "./MiddlewareUtils";
 import {EMPTY_FUNCTION, NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
+import UpgradeRequest from "./UpgradeRequest";
+import {WebSocket} from "ziron-ws";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -100,13 +100,17 @@ export default class Socket
     public onUnknownTransmit: TransmitListener = EMPTY_FUNCTION;
 
     private readonly _server: Server;
-    private readonly _socket: WebSocket;
-    readonly request: any;
-    readonly handshakeAttachment: any;
 
-    public readonly remotePort: number;
+    /**
+     * @internal
+     */
+    readonly _socket: WebSocket;
+
+    readonly upgradeRequest: UpgradeRequest;
+
     public readonly remoteAddress: string;
     /**
+     * @description
      * Either 4 or 6.
      */
     public readonly remoteFamily: number;
@@ -115,67 +119,89 @@ export default class Socket
 
     private readonly _transport: Transport;
 
-    constructor(server: Server<any,any>, socket: WebSocket, upgradeRequest: HTTP.IncomingMessage) {
+    constructor(server: Server<any,any>, socket: WebSocket) {
         this._server = server;
         this._socket = socket;
+        this.upgradeRequest = socket.req;
 
-        this.request = upgradeRequest;
-        this.handshakeAttachment = upgradeRequest.attachment;
-
-        const addresses = this._socket._socket;
-
-        this.remoteAddress = tryGetClientIpFromHeaders(upgradeRequest) || addresses.remoteAddress!;
-        this.remotePort = tryGetClientPortFromHeaders(upgradeRequest) || addresses.remotePort!;
+        this.remoteAddress = tryGetClientIpFromHeaders(this.upgradeRequest.headers) ||
+            Buffer.from(socket.getRemoteAddressAsText()).toString();
         this.remoteFamily = isIp.version(this.remoteAddress) || 4;
-
-        socket.on('error', err => this._emitter.emit('error',err));
-        socket.on('close', (code, reason) => this._destroy(code || 1001, reason));
 
         this._transport = new Transport({
             send: this._sendRaw.bind(this),
+            cork: this._cork.bind(this),
             onListenerError: err => this._emitter.emit('error',err),
             onInvalidMessage: () => this._destroy(4400,'Bad message'),
             onInvoke: this._onInvoke.bind(this),
-            onTransmit: this._onTransmit.bind(this)
-        },true)
-        this._transport.ackTimeout = server._options.ackTimeout
+            onTransmit: this._onTransmit.bind(this),
+            hasLowSendBackpressure: this.hasLowSendBackpressure.bind(this)
+        },this._server.transportOptions,true);
         this.transmit = this._transport.transmit.bind(this._transport);
         this.invoke = this._transport.invoke.bind(this._transport);
-        this.sendPreparedPackage = this._transport.sendPreparedPackage.bind(this._transport);
-        this.flushBuffer = this._transport.flushBuffer.bind(this._transport);
-        this.getBufferSize = this._transport.getBufferSize.bind(this._transport);
-        socket.on('message',this._transport.emitMessage.bind(this._transport));
+        this.sendPackage = this._transport.sendPackage.bind(this._transport);
+        this.flushBuffer = this._transport.buffer.flushBuffer.bind(this._transport);
+        this.getBufferSize = this._transport.buffer.getBufferSize.bind(this._transport);
         server.socketConstructorExtension(this);
     }
 
     public readonly transmit: Transport['transmit'];
     public readonly invoke: Transport['invoke'];
-    public readonly sendPreparedPackage: Transport['sendPreparedPackage'];
-    public readonly flushBuffer: Transport['flushBuffer'];
-    public readonly getBufferSize: Transport['getBufferSize'];
+    public readonly sendPackage: Transport['sendPackage'];
+    public readonly flushBuffer: Transport['buffer']['flushBuffer'];
+    public readonly getBufferSize: Transport['buffer']['getBufferSize'];
 
-    private _sendRaw(data: string | Buffer | ArrayBuffer) {
-        try {this._socket.send(data);}
-        catch (err) {this._destroy(1006, err.toString())}
+    get bufferedSendAmount(): number {
+        return this._socket.getBufferedAmount();
+    }
+
+    /**
+     * @internal
+     */
+    _emitClose(code: number, message: string): void {
+        this._destroy(code || 1001, message);
+    }
+
+    /**
+     * @internal
+     * @param msg
+     */
+    _emitMessage(msg: string | ArrayBuffer) {
+        this._transport.emitMessage(msg);
+    }
+
+    /**
+     * @internal
+     */
+    _emitDrain() {
+        this._transport.emitSendBackpressureDrain();
+    }
+
+    private _cork(callback: () => void) {
+        this._socket.cork(callback);
+    }
+
+    private _sendRaw(data: string | ArrayBuffer, binary?: boolean, batch?: boolean) {
+        this._socket.send(data,binary,this._server._shouldCompress(data,binary,batch));
     }
 
     private _clearListener() {
         this._emitter.off();
     }
 
-    private _destroy(code: number, reason?: string) {
+    private _destroy(code: number, message?: string) {
         (this as Writable<Socket>).open = false;
         this._transport.emitBadConnection(BadConnectionType.Disconnect)
-        this._transport.clearBuffer();
+        this._transport.buffer.clearBuffer();
         (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
         (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).sendPreparedPackage = NOT_OPEN_FAILURE_FUNCTION;
-        this._emit('disconnect', code, reason);
-        this._server._emit('disconnection', this, code, reason);
+        (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
+        this._emit('disconnect', code, message);
+        this._server._emit('disconnection', this, code, message);
 
         if (!socketProtocolIgnoreStatuses[code]) {
             this._emit('error', new SocketProtocolError(socketProtocolErrorStatuses[code] ||
-                (`Socket connection closed with status: ${code}` + (reason ? (` and reason: ${reason}.`) : '.')), code));
+                (`Socket connection closed with code: ${code}` + (message ? (` and message: ${message}.`) : '.')), code));
         }
 
         this._unsubscribeAll();
@@ -216,12 +242,15 @@ export default class Socket
         this.transmit(InternalServerTransmits.SetAuthToken,signedAuthToken);
     }
 
-    public disconnect(code?: number, reason?: string) {
-        code = code || 1000;
-        if (this.open) {
-            this._destroy(code, reason);
-            this._socket.close(code, reason);
-        }
+    public disconnect(code?: number, message?: string) {
+        if (this.open) this._socket.end(code || 1000, message);
+    }
+
+    /**
+     * @description
+     */
+    public hasLowSendBackpressure(): boolean {
+        return this._socket.getBufferedAmount() <= this._server.lowSendBackpressureMark;
     }
 
     private async _handleAuthenticateInvoke(signedAuthToken: any, end: (data?: any) => void, reject: (err?: any) => void) {
@@ -279,7 +308,7 @@ export default class Socket
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
         else if(this._server._checkSocketChLimitReached(this.subscriptions.length))
             return reject(new InvalidActionError(`Socket ${this.id} tried to exceed the channel subscription limit of ${
-                this._server._options.socketChannelLimit}`));
+                this._server.options.socketChannelLimit}`));
         else {
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
@@ -317,7 +346,7 @@ export default class Socket
     }
 
     private async _handleClientPublishInvoke(data: any, end: (data?: any) => void, reject: (err?: any) => void, type: DataType) {
-        if(!this._server._options.allowClientPublish) return end(4403);
+        if(!this._server.options.allowClientPublish) return end(4403);
         data = data || [];
         const channel = data[0];
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
@@ -336,7 +365,7 @@ export default class Socket
     }
 
     private async _handleClientPublishTransmit(data: any, type: DataType) {
-        if(!this._server._options.allowClientPublish) return;
+        if(!this._server.options.allowClientPublish) return;
         data = data || [];
         const channel = data[0];
         if(typeof channel !== "string") return;
@@ -356,12 +385,12 @@ export default class Socket
      * [Use this method only when you know what you do.]
      */
     public _terminate() {
-        this._socket.terminate();
+        this._socket.close();
         (this as Writable<Socket>).open = false;
-        this._transport.clearBuffer();
+        this._transport.buffer.clearBuffer();
         (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
         (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).sendPreparedPackage = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
         this._unsubscribeAll();
         this._clearListener();
     }
