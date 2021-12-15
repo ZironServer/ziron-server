@@ -473,7 +473,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * @param data
      * @param options
      */
-    public readonly transmitToGroup: (group: string, receiver: string, data: any, options: ComplexTypesOption & BatchOption) => void;
+    public readonly transmitToGroup: (group: string, receiver: string, data?: any, options?: ComplexTypesOption & BatchOption) => void;
 
     /**
      * @description
