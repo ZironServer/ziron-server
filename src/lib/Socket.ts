@@ -108,6 +108,15 @@ export default class Socket
 
     readonly upgradeRequest: UpgradeRequest;
 
+    /**
+     * @description
+     * The client's attachment to the upgrade request
+     * while doing the handshake.
+     */
+    get handshakeAttachment(): any {
+        return this.upgradeRequest.attachment;
+    }
+
     public readonly remoteAddress: string;
     /**
      * @description
