@@ -198,13 +198,20 @@ export default class Socket
         this._emitter.off();
     }
 
+    private _blockSocketInteractions() {
+        (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).bufferedSendAmount = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).hasLowSendBackpressure = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).join = NOT_OPEN_FAILURE_FUNCTION;
+    }
+
     private _destroy(code: number, message?: string) {
         (this as Writable<Socket>).open = false;
         this._transport.emitBadConnection(BadConnectionType.Disconnect)
         this._transport.buffer.clearBuffer();
-        (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
+        this._blockSocketInteractions();
         this._emit('disconnect', code, message);
         this._server._emit('disconnection', this, code, message);
 
@@ -433,12 +440,7 @@ export default class Socket
         this._socket.close();
         (this as Writable<Socket>).open = false;
         this._transport.buffer.clearBuffer();
-        (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).bufferedSendAmount = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).hasLowSendBackpressure = NOT_OPEN_FAILURE_FUNCTION;
-        (this as Writable<Socket>).join = NOT_OPEN_FAILURE_FUNCTION;
+        this._blockSocketInteractions();
         this._unsubscribeAll();
         this._clearListener();
     }
