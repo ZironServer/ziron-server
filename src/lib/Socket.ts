@@ -437,7 +437,7 @@ export default class Socket
      * [Use this method only when you know what you do.]
      */
     public _terminate() {
-        this._socket.close();
+        if(this.open) this._socket.close();
         (this as Writable<Socket>).open = false;
         this._transport.buffer.clearBuffer();
         this._blockSocketInteractions();
