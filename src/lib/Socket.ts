@@ -160,7 +160,7 @@ export default class Socket
     public readonly flushBuffer: Transport['buffer']['flushBuffer'];
     public readonly getBufferSize: Transport['buffer']['getBufferSize'];
 
-    get bufferedSendAmount(): number {
+    bufferedSendAmount(): number {
         return this._socket.getBufferedAmount();
     }
 
@@ -252,7 +252,7 @@ export default class Socket
     }
 
     public disconnect(code?: number, message?: string) {
-        if (this.open) this._socket.end(code || 1000, message);
+        if(this.open) this._socket.end(code || 1000, message);
     }
 
     /**
@@ -419,6 +419,8 @@ export default class Socket
      * @param group
      */
     public leave(group: string): boolean {
+        //The socket is not open, so it's not a subscriber anymore.
+        if(!this.open) return false;
         return this._socket.unsubscribe("G" + group);
     }
 
@@ -434,6 +436,9 @@ export default class Socket
         (this as Writable<Socket>).transmit = NOT_OPEN_FAILURE_FUNCTION;
         (this as Writable<Socket>).invoke = NOT_OPEN_FAILURE_FUNCTION;
         (this as Writable<Socket>).sendPackage = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).bufferedSendAmount = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).hasLowSendBackpressure = NOT_OPEN_FAILURE_FUNCTION;
+        (this as Writable<Socket>).join = NOT_OPEN_FAILURE_FUNCTION;
         this._unsubscribeAll();
         this._clearListener();
     }
