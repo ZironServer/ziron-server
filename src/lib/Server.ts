@@ -290,10 +290,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private _setUpApp(): TemplatedApp {
         const tls = this.options.tls;
         return (tls ? SSLApp({
-            key_file_name: tls.keyFileName,
-            cert_file_name: tls.certFileName,
+            key_file_name: tls.keyFile,
+            cert_file_name: tls.certFile,
             passphrase: tls.passphrase,
-            dh_params_file_name: tls.dhParamsFileName,
+            dh_params_file_name: tls.dhParamsFile,
             ssl_prefer_low_memory_usage: tls.releaseBuffersMode
         }) : App()).ws("/*",{
             compression: this._compressionOptions.active ?

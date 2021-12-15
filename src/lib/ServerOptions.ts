@@ -113,10 +113,28 @@ export interface CompressionOptions {
 }
 
 export interface TLSOptions {
-    keyFileName?: RecognizedString;
-    certFileName?: RecognizedString;
+    /**
+     * @description
+     * The file that contains the certificate.
+     */
+    certFile?: RecognizedString;
+    /**
+     * @description
+     * The file that contains the private key.
+     */
+    keyFile?: RecognizedString;
+    /**
+     * @description
+     * When the private key file is encrypted and protected with a passphrase,
+     * it is necessary to provide it to decrypt the key file before usage.
+     */
     passphrase?: RecognizedString;
-    dhParamsFileName?: RecognizedString;
+    /**
+     * @description
+     * File name containing the Diffie-Hellman
+     * (DH) key exchange parameters.
+     */
+    dhParamsFile?: RecognizedString;
     /**
      * @description
      * In this mode, the read buffers or write buffers memory for a
@@ -148,6 +166,18 @@ export default interface ServerOptions {
          */
         expireCheckInterval?: number,
     },
+    /**
+     * @description
+     * Specifies whether the server should use permessage-deflate and
+     * when to compress messages, and what compressor should be used.
+     * @default {
+     *     active: true,
+     *     compressor: DedicatedCompressor4KB,
+     *     alwaysCompressBatches: false,
+     *     minBytes: 104857,
+     *     minLength: 20000
+     * }
+     */
     compression?: CompressionOptions;
     /**
      * @description
@@ -187,31 +217,45 @@ export default interface ServerOptions {
      * Specifies the interval in that the server pings the client sockets.
      * The client sockets need to send a pong before the next ping
      * is sent otherwise the socket will be disconnected.
+     * @default 8000
      */
     pingInterval?: number,
     /**
      * @description
      * Specifies the maximum allowed message size in bytes.
+     * The specified value also influences the max
+     * batch size of text and binary packages.
      * @default 4194304 (4 MB)
      */
     maxPayloadSize?: number,
     /**
      * @description
+     * The maximum send backpressure per socket that is allowed.
+     * When the limit is exceeded, the socket connection will be dropped.
+     * Notice that streams will be paused when the backpressure is more
+     * than 50% of the maximum backpressure.
+     * They continue automatically when the backpressure drains.
+     * Also, the batching buffer max size depends on the value.
+     * When the batching buffer exceeds 70% of the maximum backpressure,
+     * the buffer will be automatically flushed.
      * @default 6291456 (6 MB)
      */
     maxBackpressure?: number,
     /**
-     * The port where the server is listening.
+     * @description
+     * The port where the server should listen.
      * @default 3000
      */
     port?: number;
     /**
+     * @description
      * The URL path of the server where handshake requests are processed, and the health endpoint is provided.
      * Notice multiple slashes at the end are not supported and will be removed.
      * @default '/'
      */
     path?: string;
     /**
+     * @description
      * With this property, you can specify what origins are allowed to connect to the server.
      * You can specify the port and hostname.
      * Also, a star can be used as a wild card for any port or any hostname.
@@ -237,12 +281,14 @@ export default interface ServerOptions {
      */
     origins?: string[] | string | null;
     /**
+     * @description
      * Specifies if the server should automatically provide a health HTTP endpoint.
      * The endpoint could be used for Docker health checks.
      * @default true
      */
     healthEndpoint?: boolean;
     /**
+     * @description
      * Defines TLS options.
      * Provide these options to enable TLS 1.3 messaging encryption.
      * @default null
