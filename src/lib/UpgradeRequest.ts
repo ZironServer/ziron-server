@@ -25,6 +25,10 @@ export default class UpgradeRequest<T = any> {
     readonly url: string;
     readonly query: string;
     readonly method: string;
+    /**
+     * @description
+     * The attachment of the handshake.
+     */
     readonly attachment: T;
     readonly headers: Readonly<UpgradeHeaders>;
     readonly signedToken: string | null;
