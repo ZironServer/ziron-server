@@ -69,7 +69,7 @@ export default class InternalBroker {
     socketUnsubscribe(socket: Socket, channel: string) {
         if(this.socketSubscriptions.has(channel)) {
             const internalCh = "C" + channel;
-            socket._socket.unsubscribe(internalCh);
+            if(socket.open) socket._socket.unsubscribe(internalCh);
             if(this._server._app.numSubscribers(internalCh) <= 0) {
                 this.socketSubscriptions.delete(channel);
                 if(!this.exchangeChannels.has(channel))
