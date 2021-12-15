@@ -298,17 +298,15 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         }) : App()).ws("/*",{
             compression: this._compressionOptions.active ?
                 COMPRESSOR_TO_INTERNAL_COMPRESSOR[this._compressionOptions.compressor] : DISABLED,
-                maxPayloadLength: this.options.maxPayloadSize,
-                maxBackpressure: this.options.maxBackpressure,
-                idleTimeout: this.options.pingInterval * 2,
-                upgrade: this._handleUpgrade.bind(this),
-                open: this._handleWsOpen.bind(this),
-                message: Server._handleWsMessage.bind(this),
-                drain: Server._handleWsDrain.bind(this),
-                close: Server._handleWsClose.bind(this),
-                ...({
-                    sendPingsAutomatically: 0,
-                } as any)
+            maxPayloadLength: this.options.maxPayloadSize,
+            maxBackpressure: this.options.maxBackpressure,
+            idleTimeout: this.options.pingInterval * 2,
+            upgrade: this._handleUpgrade.bind(this),
+            open: this._handleWsOpen.bind(this),
+            message: Server._handleWsMessage.bind(this),
+            drain: Server._handleWsDrain.bind(this),
+            close: Server._handleWsClose.bind(this),
+            sendPingsAutomatically: 0
         });
     }
 
