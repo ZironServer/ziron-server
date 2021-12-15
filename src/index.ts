@@ -5,7 +5,7 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import Server                    from "./lib/Server";
-import ServerOptions, {Compressor} from "./lib/ServerOptions";
+import ServerOptions, {CompressionOptions, Compressor, TLSOptions} from "./lib/ServerOptions";
 import Socket, {ProcedureListener, ProcedureEnd,
     ProcedureReject, ReceiverListener} from "./lib/Socket";
 import AuthEngine                from "./lib/AuthEngine";
@@ -28,7 +28,9 @@ export {
     Server,
     FailedToListenError,
     ServerOptions,
+    CompressionOptions,
     Compressor,
+    TLSOptions,
     Socket,
     AuthEngine,
     ChannelExchange,
