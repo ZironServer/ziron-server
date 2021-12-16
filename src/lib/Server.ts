@@ -13,15 +13,15 @@ import {
     App,
     TemplatedApp,
     DISABLED,
-    HttpResponse,
     HttpRequest,
-    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket
+    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket, HttpResponse
 } from 'ziron-ws';
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
 import {preprocessPath, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
+import * as HTTP from "http";
 import ChannelExchange from "./ChannelExchange";
 import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
@@ -36,7 +36,6 @@ import {
     Transport,
     TransportOptions
 } from "ziron-engine";
-import {Http} from "./Http";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -186,7 +185,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * This extension will be called in the socket constructor and
      * can be used to add properties to the Socket instance.
      * Use this extension only when you know what you are doing.
-     * It is also recommended to specify this new Socket type at the
+     * It is also recommended specifying this new Socket type at the
      * generic ES (extended socket) parameter of the Server class.
      * This approach is implemented rather than a custom Socket class to prevent
      * a larger proto chain and for the ability to add external variables into the constructor easily.
@@ -234,7 +233,6 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     protected readonly internalBroker: InternalBroker;
 
-    public readonly http: Http;
     public readonly channels: ChannelExchange;
     /**
      * @description
@@ -261,12 +259,11 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
         this._setUpSocketChLimit();
         this._app = this._setUpApp();
-        this.http = this._app;
         this._groupTransport = this._createGroupTransport();
         this.transmitToGroup = this._groupTransport.transmit.bind(this._groupTransport);
         this._startPingInterval();
         this._startAuthExpireCheck();
-        if(this.options.healthEndpoint) this._createHealthCheckEndpoint();
+        this._setupHttpRequestHandling();
     }
 
     private _createGroupTransport() {
@@ -461,7 +458,6 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         }
     }
 
-    private static _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
     private _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
         (this as Writable<Server<E,ES>>).wsMessageCount++;
         const zSocket: Socket = ws.zSocket;
@@ -478,21 +474,56 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         if(zSocket) zSocket._emitClose(code,Buffer.from(message).toString());
     }
 
-    private _createHealthCheckEndpoint() {
+    private _setupHttpRequestHandling() {
         const healthPath = `${this.options.path}/health`;
-        this.http.get(healthPath,async (res) => {
+        const upgradeRequiredBody = HTTP.STATUS_CODES[426]|| '';
+
+        this._app.any("/*",async (res,req) => {
+            (this as Writable<Server<E,ES>>).httpRequestCount++;
+
             res.onAborted(() => {res.aborted = true;});
 
-            let healthy: boolean = false;
-            try {healthy = await this.healthCheck()}
-            catch (err) {this._emit('error', err)}
-
-            if (res.aborted) return;
-            res.cork(() => {
-                res.writeStatus(healthy ? "200" : "500");
-                res.writeHeader('Content-Type','text/html');
-                res.end(healthy ? 'Healthy' : 'Unhealthy');
+            const origin = req.getHeader("origin");
+            if(this.originsChecker(origin)){
+                res.cork(() => {
+                    res.writeHeader('Access-Control-Allow-Origin', origin);
+                    res.writeHeader('Access-Control-Allow-Methods', '*');
+                    res.writeHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype');
+                    res.writeHeader('Access-Control-Allow-Credentials', 'true');
+                });
+            }
+            else return res.cork(() => {
+                res.writeStatus("401");
+                res.write('Failed - Invalid origin: ' + origin);
+                res.end();
             });
+
+            const path = req.getUrl().split('?')[0].split('#')[0];
+
+            if(this.options.healthEndpoint && req.getMethod() === 'get' && path === healthPath)
+            {
+                let healthy: boolean = false;
+                try {healthy = await this.healthCheck()}
+                catch (err) {this._emit('error', err)}
+
+                if (res.aborted) return;
+                res.cork(() => {
+                    res.writeStatus(healthy ? "200" : "500");
+                    res.writeHeader('Content-Type','text/html');
+                    res.end(healthy ? 'Healthy' : 'Unhealthy');
+                });
+            }
+            else if(this.httpRequestHandler) this.httpRequestHandler(path,req,res);
+            else {
+                res.cork(() => {
+                    res.writeHeader('Content-Type','text/plain');
+                    res.writeHeader('Content-Length',upgradeRequiredBody.length.toString());
+                    res.writeStatus('426');
+                    res.write(upgradeRequiredBody);
+                    res.end();
+                })
+            }
+
         })
     }
 
