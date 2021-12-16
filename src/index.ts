@@ -7,7 +7,8 @@ Copyright(c) Ing. Luca Gian Scaringella
 import ServerOptions, {CompressionOptions, Compressor, TLSOptions} from "./lib/ServerOptions";
 import Socket, {ProcedureListener, ProcedureEnd,
     ProcedureReject, ReceiverListener} from "./lib/Socket";
-import {HttpRequest,HttpResponse}      from "ziron-ws";
+import {HttpRequest}             from "ziron-ws";
+import {HttpResponse}            from "./lib/EnhanceHttpResponse";
 import Server                    from "./lib/Server";
 import AuthEngine                from "./lib/AuthEngine";
 import ChannelExchange           from "./lib/ChannelExchange";
@@ -18,8 +19,8 @@ import {TimeoutError, Transport} from "ziron-engine";
 import InternalBroker            from "./lib/broker/InternalBroker";
 import {FailedToListenError}     from "./lib/FailedToListenError";
 import UpgradeRequest            from "./lib/UpgradeRequest";
+import StaticFilesRouter         from "./lib/StaticFilesRouter";
 import {AuthTokenExpiredError, AuthTokenInvalidError, AuthTokenError, AuthTokenNotBeforeError} from "ziron-errors";
-import { serveDir as staticFiles } from 'uwebsocket-serve';
 
 EventEmitter.onceTimeoutErrorCreator = () => new TimeoutError('Once timeout reached.','OnceListener');
 const prepareMultiTransmit = Transport.prepareMultiTransmit;
@@ -47,8 +48,8 @@ export {
     AuthTokenInvalidError,
     AuthTokenError,
     AuthTokenNotBeforeError,
-    staticFiles,
     UpgradeRequest,
     HttpRequest,
-    HttpResponse
+    HttpResponse,
+    StaticFilesRouter
 }
