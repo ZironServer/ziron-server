@@ -4,16 +4,16 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import {HttpResponse as CoreHttpResponse} from "ziron-ws";
+import {HttpResponse as RawHttpResponse} from "ziron-ws";
 
-export type HttpResponse = Omit<CoreHttpResponse,'writeHeader'> & {
+export type HttpResponse = Omit<RawHttpResponse,'writeHeader'> & {
   headers: Record<string,string>;
   writeHeaders: () => void;
   aborted?: boolean;
   ended?: boolean;
 };
 
-export default function enhanceHttpResponse(res: CoreHttpResponse): HttpResponse {
+export default function enhanceHttpResponse(res: RawHttpResponse): HttpResponse {
     const originalEnd = res.end.bind(res);
     const originalTryEnd = res.tryEnd.bind(res);
     res.end = (...args) => {
@@ -38,7 +38,7 @@ export default function enhanceHttpResponse(res: CoreHttpResponse): HttpResponse
  * @param res
  * @param headers
  */
-export function writeResponseHeaders(res: CoreHttpResponse, headers: {[name: string]: string }) {
+export function writeResponseHeaders(res: RawHttpResponse, headers: {[name: string]: string }) {
     res.cork(() => {
         for(const name in headers) res.writeHeader(name, headers[name].toString());
     });
