@@ -14,19 +14,19 @@ import {
     TemplatedApp,
     DISABLED,
     HttpRequest,
-    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket, HttpResponse
+    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket, HttpResponse as RawHttpResponse
 } from 'ziron-ws';
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
 import {preprocessPath, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
-import * as HTTP from "http";
 import ChannelExchange from "./ChannelExchange";
 import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
 import {FailedToListenError} from "./FailedToListenError";
+import enhanceHttpResponse, {HttpResponse} from "./EnhanceHttpResponse";
 import UpgradeRequest from "./UpgradeRequest";
 import {
     BatchOption,
@@ -355,11 +355,11 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         },this.options.auth.expireCheckInterval ?? 12000);
     }
 
-    private static _abortConnection(res: HttpResponse, code: number, message: string): void {
+    private static _abortConnection(res: RawHttpResponse, code: number, message: string): void {
         res.end(`HTTP/1.1 ${code} ${message}\r\n\r\n`,true);
     }
 
-    private _handleUpgrade(res: HttpResponse,req: HttpRequest,context: us_socket_context_t) {
+    private _handleUpgrade(res: RawHttpResponse,req: HttpRequest,context: us_socket_context_t) {
         (this as Writable<Server<E,ES>>).httpRequestCount++;
 
         if(this.refuseConnections) return Server._abortConnection(res,403,'Client verification failed');
@@ -476,26 +476,24 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     private _setupHttpRequestHandling() {
         const healthPath = `${this.options.path}/health`;
-        const upgradeRequiredBody = HTTP.STATUS_CODES[426]|| '';
 
-        this._app.any("/*",async (res,req) => {
+        this._app.any("/*",async (rawRes,req) => {
             (this as Writable<Server<E,ES>>).httpRequestCount++;
 
-            res.onAborted(() => {res.aborted = true;});
+            const res = enhanceHttpResponse(rawRes);
 
             const origin = req.getHeader("origin");
             if(this.originsChecker(origin)){
-                res.cork(() => {
-                    res.writeHeader('Access-Control-Allow-Origin', origin);
-                    res.writeHeader('Access-Control-Allow-Methods', '*');
-                    res.writeHeader('Access-Control-Allow-Headers', 'X-Requested-With,contenttype');
-                    res.writeHeader('Access-Control-Allow-Credentials', 'true');
-                });
+                res.headers['Access-Control-Allow-Origin'] = origin;
+                res.headers['Access-Control-Allow-Methods'] = '*';
+                res.headers['Access-Control-Allow-Headers'] = 'X-Requested-With,contenttype';
+                res.headers['Access-Control-Allow-Credentials'] = 'true';
             }
             else return res.cork(() => {
-                res.writeStatus("401");
-                res.write('Failed - Invalid origin: ' + origin);
-                res.end();
+                res.writeStatus("401 Unauthorized");
+                res.headers['Content-Type'] = 'text/plain';
+                res.writeHeaders();
+                res.end('Failed - Invalid origin: ' + origin);
             });
 
             const path = req.getUrl().split('?')[0].split('#')[0];
@@ -508,22 +506,17 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
                 if (res.aborted) return;
                 res.cork(() => {
-                    res.writeStatus(healthy ? "200" : "500");
-                    res.writeHeader('Content-Type','text/html');
+                    res.writeStatus(healthy ? "200 OK" : "500 Internal Server Error");
+                    res.headers['Content-Type'] = 'text/html';
+                    res.writeHeaders();
                     res.end(healthy ? 'Healthy' : 'Unhealthy');
                 });
             }
             else if(this.httpRequestHandler) this.httpRequestHandler(path,req,res);
-            else {
-                res.cork(() => {
-                    res.writeHeader('Content-Type','text/plain');
-                    res.writeHeader('Content-Length',upgradeRequiredBody.length.toString());
-                    res.writeStatus('426');
-                    res.write(upgradeRequiredBody);
-                    res.end();
-                })
-            }
-
+            else res.cork(() => {
+                res.writeStatus('426 Upgrade Required');
+                res.end();
+            })
         })
     }
 
