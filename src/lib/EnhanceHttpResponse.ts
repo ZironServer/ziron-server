@@ -1,0 +1,34 @@
+/*
+Author: Ing. Luca Gian Scaringella
+GitHub: LucaCode
+Copyright(c) Ing. Luca Gian Scaringella
+ */
+
+import {HttpResponse as CoreHttpResponse} from "ziron-ws";
+import {writeResponseHeaders} from "./Utils";
+
+export type HttpResponse = Omit<CoreHttpResponse,'writeHeader'> & {
+  headers: Record<string,string>;
+  writeHeaders: () => void;
+  aborted?: boolean;
+  ended?: boolean;
+};
+
+export default function enhanceHttpResponse(res: CoreHttpResponse): HttpResponse {
+    const originalEnd = res.end.bind(res);
+    const originalTryEnd = res.tryEnd.bind(res);
+    res.end = (...args) => {
+        originalEnd(...args);
+        res.ended = true;
+        return res;
+    };
+    res.tryEnd = (...args) => {
+        const [ok, done] = originalTryEnd(...args);
+        res.ended = done;
+        return [ok, done]
+    };
+    res.onAborted(() => {res.aborted = true;});
+    res.writeHeaders = () => writeResponseHeaders(res,res.headers);
+    res.headers = {};
+    return res as unknown as HttpResponse;
+}
