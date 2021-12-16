@@ -14,12 +14,6 @@ export function tryGetClientIpFromHeaders(headers: UpgradeHeaders): string | und
     return undefined;
 }
 
-export function tryGetClientPortFromHeaders(headers: UpgradeHeaders): number | undefined {
-    const xForwardedPort = headers.xForwardedPort;
-    if(xForwardedPort) return parseInt(xForwardedPort.split(',')[0].trim()) || undefined;
-    return undefined;
-}
-
 export function preprocessPath(path: string): string {
     // add pre slash
     if (path !== '' && path[0] !== '/') path = `/${path}`;
