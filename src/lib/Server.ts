@@ -300,6 +300,9 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 COMPRESSOR_TO_INTERNAL_COMPRESSOR[this._compressionOptions.compressor] : DISABLED,
             maxPayloadLength: this.options.maxPayloadSize,
             maxBackpressure: this.options.maxBackpressure,
+            ...({
+                closeOnBackpressureLimit: 1
+            } as any),
             idleTimeout: this.options.pingInterval * 2,
             upgrade: this._handleUpgrade.bind(this),
             open: this._handleWsOpen.bind(this),
