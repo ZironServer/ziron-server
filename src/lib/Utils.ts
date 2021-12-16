@@ -8,8 +8,6 @@ import {UpgradeHeaders} from "./UpgradeRequest";
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
-export type ReplaceReturnType<T extends (...a: any) => any, TNewReturn> = (...a: Parameters<T>) => TNewReturn;
-
 export function tryGetClientIpFromHeaders(headers: UpgradeHeaders): string | undefined {
     const xForwardedFor = headers.xForwardedFor;
     if(xForwardedFor) return xForwardedFor.split(',')[0].trim();
