@@ -602,6 +602,17 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     resetTransmitCount()  {(this as Writable<Server<E,ES>>).transmitCount = 0;}
     resetHttpRequestCount()  {(this as Writable<Server<E,ES>>).httpRequestCount = 0;}
 
+    /**
+     * @description
+     * Resets all counts (wsMessageCount,invokeCount,transmitCount and httpRequestCount).
+     */
+    resetCounts() {
+        (this as Writable<Server<E,ES>>).wsMessageCount = 0;
+        (this as Writable<Server<E,ES>>).invokeCount = 0;
+        (this as Writable<Server<E,ES>>).transmitCount = 0;
+        (this as Writable<Server<E,ES>>).httpRequestCount = 0;
+    }
+
     stopListen() {
         if(this._listenToken) {
             us_listen_socket_close(this._listenToken);
