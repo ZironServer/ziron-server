@@ -251,8 +251,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         this.transportOptions = this._createTransportOptions();
         this.lowSendBackpressureMark = Math.trunc(0.5 * this.options.maxBackpressure);
 
+        this._loadCompressionOptions();
         this.auth = new AuthEngine(this.options.auth);
-
         this.originsChecker = createOriginsChecker(this.options.origins);
 
         this.internalBroker = new InternalBroker(this);
