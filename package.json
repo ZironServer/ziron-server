@@ -27,7 +27,7 @@
     "uwebsocket-serve": "1.0.7",
     "ziron-errors": "1.4.0",
     "ziron-events": "1.4.0",
-    "ziron-engine": "2.0.0",
+    "ziron-engine": "2.1.0",
     "@types/node": "^13.7.6",
     "is-ip": "^3.1.0",
     "docker-secret": "^1.2.3"
