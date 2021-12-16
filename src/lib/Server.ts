@@ -562,10 +562,6 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      */
     _checkSocketChLimitReached: (count: number) => boolean;
 
-    private _handleServerError(error: string | Error) {
-        this._emit('error',typeof error === 'string' ? new ServerProtocolError(error) : error);
-    }
-
     getInternalSubscriptions(): string[] {
         return this.internalBroker.getSubscriptions();
     }
