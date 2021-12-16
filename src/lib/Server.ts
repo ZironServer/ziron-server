@@ -153,10 +153,32 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     public readonly clients: Record<string, ES> = {};
 
     /**
-     * This is the count of web socket request means invokes and transmit since the server is listening.
-     * It is not the count of packages which will be greater.
+     * @description
+     * This is a counter of WebSocket messages.
+     * You can reset this counter with the resetWsMessageCount method.
      */
-    public readonly wsRequestCount: number = 0;
+    public readonly wsMessageCount: number = 0;
+
+    /**
+     * @description
+     * This is a counter of received invokes.
+     * You can reset this counter with the resetInvokeCount method.
+     */
+    public readonly invokeCount: number = 0;
+
+    /**
+     * @description
+     * This is a counter of received transmits.
+     * You can reset this counter with the resetTransmitCount method.
+     */
+    public readonly transmitCount: number = 0;
+
+    /**
+     * @description
+     * This is a counter of HTTP requests.
+     * You can reset this counter with the resetHttpRequestCount method.
+     */
+    public readonly httpRequestCount: number = 0;
 
     /**
      * @description
@@ -179,6 +201,15 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * Promises are considered, and the connection is only ready when the promise is resolved.
      */
     public connectionHandler: (socket: ES) => Promise<any> | any = EMPTY_FUNCTION;
+
+    /**
+     * @description
+     * Set this property to handle HTTP requests.
+     * All HTTP requests (except health endpoint requests) will be answered
+     * with 426 (Upgrade Required) when this property is undefined.
+     * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
+     */
+    public httpRequestHandler?: (path: string,req: HttpRequest,res: HttpResponse) => Promise<any> | any;
 
     /**
      * @description
@@ -306,9 +337,9 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             idleTimeout: this.options.pingInterval * 2,
             upgrade: this._handleUpgrade.bind(this),
             open: this._handleWsOpen.bind(this),
-            message: Server._handleWsMessage.bind(this),
-            drain: Server._handleWsDrain.bind(this),
-            close: Server._handleWsClose.bind(this),
+            message: this._handleWsMessage.bind(this),
+            drain: Server._handleWsDrain,
+            close: Server._handleWsClose,
             sendPingsAutomatically: 0
         });
     }
@@ -332,6 +363,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private _handleUpgrade(res: HttpResponse,req: HttpRequest,context: us_socket_context_t) {
+        (this as Writable<Server<E,ES>>).httpRequestCount++;
+
         if(this.refuseConnections) return Server._abortConnection(res,403,'Client verification failed');
 
         const reqPath = req.getUrl().split('?')[0].split('#')[0];
@@ -429,6 +462,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private static _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
+    private _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
+        (this as Writable<Server<E,ES>>).wsMessageCount++;
         const zSocket: Socket = ws.zSocket;
         if(zSocket) zSocket._emitMessage(isBinary ? message : Buffer.from(message).toString());
     }
@@ -535,9 +570,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         return this.internalBroker.getSubscriptions();
     }
 
-    resetWsRequestCount()  {
-        (this as Writable<Server<E,ES>>).wsRequestCount = 0;
-    }
+    resetWsMessageCount()  {(this as Writable<Server<E,ES>>).wsMessageCount = 0;}
+    resetInvokeCount()  {(this as Writable<Server<E,ES>>).invokeCount = 0;}
+    resetTransmitCount()  {(this as Writable<Server<E,ES>>).transmitCount = 0;}
+    resetHttpRequestCount()  {(this as Writable<Server<E,ES>>).httpRequestCount = 0;}
 
     stopListen() {
         if(this._listenToken) {
