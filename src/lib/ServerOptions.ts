@@ -156,6 +156,45 @@ export default interface ServerOptions {
     id?: string;
     /**
      * @description
+     * The port where the server should listen.
+     * @default 3000
+     */
+    port?: number;
+    /**
+     * @description
+     * The URL path of the server where handshake requests are processed, and the health endpoint is provided.
+     * Notice multiple slashes at the end are not supported and will be removed.
+     * @default '/'
+     */
+    path?: string;
+    /**
+     * @description
+     * With this property, you can specify what origins are allowed to connect to the server.
+     * You can specify the port and hostname.
+     * Also, a star can be used as a wild card for any port or any hostname.
+     * @example
+     * //allow all origins
+     * origins: null, or
+     * origins: '*:*',
+     *
+     * //allow all with hostname example.de
+     * origins: 'example.de:*', or
+     * origins: 'example.de'
+     *
+     * //allow all with port 80
+     * origins: '*:80'
+     *
+     * //allow only hostname example.de on port 80
+     * origins: 'example.de:80'
+     *
+     * //allow all with hostname example.de or example2.de
+     * origins: ['example.de:*','example2.de']
+     *
+     * @default null (all allowed)
+     */
+    origins?: string[] | string | null;
+    /**
+     * @description
      * Specifies the auth options that are used to sign and verify JSON web tokens.
      */
     auth?: AuthOptions & {
@@ -207,6 +246,8 @@ export default interface ServerOptions {
      * @description
      * Defines the default timeout in milliseconds for
      * receiving the response of an invoke.
+     * The timeout only starts when all data of the invoke is transmitted,
+     * including all chunks of streams.
      * Notice that an individual response timeout can be specified for
      * an invoke that overrides this option value.
      * @default 7000
@@ -241,45 +282,6 @@ export default interface ServerOptions {
      * @default 6291456 (6 MB)
      */
     maxBackpressure?: number,
-    /**
-     * @description
-     * The port where the server should listen.
-     * @default 3000
-     */
-    port?: number;
-    /**
-     * @description
-     * The URL path of the server where handshake requests are processed, and the health endpoint is provided.
-     * Notice multiple slashes at the end are not supported and will be removed.
-     * @default '/'
-     */
-    path?: string;
-    /**
-     * @description
-     * With this property, you can specify what origins are allowed to connect to the server.
-     * You can specify the port and hostname.
-     * Also, a star can be used as a wild card for any port or any hostname.
-     * @example
-     * //allow all origins
-     * origins: null, or
-     * origins: '*:*',
-     *
-     * //allow all with hostname example.de
-     * origins: 'example.de:*', or
-     * origins: 'example.de'
-     *
-     * //allow all with port 80
-     * origins: '*:80'
-     *
-     * //allow only hostname example.de on port 80
-     * origins: 'example.de:80'
-     *
-     * //allow all with hostname example.de or example2.de
-     * origins: ['example.de:*','example2.de']
-     *
-     * @default null (all allowed)
-     */
-    origins?: string[] | string | null;
     /**
      * @description
      * Specifies if the server should automatically provide a health HTTP endpoint.

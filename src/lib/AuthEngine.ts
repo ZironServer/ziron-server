@@ -17,22 +17,26 @@ import crypto = require('crypto');
 
 export interface AuthOptions {
     /**
-     * The secret key which zation will use to encrypt/decrypt authTokens.
-     * If you want to use RSA or ECDSA, you should provide a authPrivateKey and authPublicKey instead of authKey.
+     * @description
+     * The secret key that is used to encrypt/decrypt auth tokens.
+     * If you want to use RSA or ECDSA, you should provide a authPrivateKey and authPublicKey instead of a authKey.
      * @default 256 bits cryptographically random hex string.
      */
     secretKey?: string | null;
     /**
+     * @description
      * The default expiry of tokens in seconds.
      * @default 86400
      */
     defaultExpiry?: number;
     /**
+     * @description
      * The algorithm that will be used to sign and verify jwt tokens.
      * @default 'HS256'
      */
     algorithm?: Algorithm;
     /**
+     * @description
      * The private secret key to signing the jwt tokens.
      * For using asymmetric encryption, you also need to define the
      * public key and change the algorithm to a proper one, e.g. RSA or ECDSA.
@@ -40,6 +44,7 @@ export interface AuthOptions {
      */
     privateKey?: string | null;
     /**
+     * @description
      * The public secret key to verify the jwt tokens.
      * For using asymmetric encryption, you also need to define the
      * private key and change the algorithm to a proper one, e.g. RSA or ECDSA.
