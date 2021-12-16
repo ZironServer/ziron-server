@@ -17,7 +17,9 @@ export interface UpgradeHeaders {
     secWebSocketExtensions: string,
     origin: string,
     xForwardedFor: string
-    xForwardedPort: string
+    xForwardedPort: string,
+    acceptLanguage: string,
+    userAgent: string
 }
 
 export default class UpgradeRequest<T = any> {
@@ -48,7 +50,9 @@ export default class UpgradeRequest<T = any> {
             secWebSocketExtensions: req.getHeader('sec-websocket-extensions'),
             origin: req.getHeader("origin"),
             xForwardedFor: req.getHeader('x-forwarded-for'),
-            xForwardedPort: req.getHeader('x-forwarded-port')
+            xForwardedPort: req.getHeader('x-forwarded-port'),
+            acceptLanguage: req.getHeader('accept-language'),
+            userAgent: req.getHeader('user-agent')
         };
         this.query = req.getQuery();
         if(this.query.length){
