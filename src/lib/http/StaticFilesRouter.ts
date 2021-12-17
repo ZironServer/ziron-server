@@ -47,7 +47,7 @@ export default class StaticFilesRouter {
         filter?: (file: string) => boolean,
         linkIndex?: boolean
         override?: boolean
-    }) {
+    } = {}) {
         if(options.linkIndex == null) options.linkIndex = true;
 
         if(!statSync(folder).isDirectory()) throw Error('Given folder path is not a directory: ' + folder);
