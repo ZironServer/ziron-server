@@ -6,6 +6,8 @@ Copyright(c) Ing. Luca Gian Scaringella
 
 import EventEmitter from "emitix";
 import Socket from "./Socket";
+import {ComplexTypesOption} from "ziron-engine";
+import {PublisherOption} from "./Options";
 
 type PublishEmitter = EventEmitter<{[key: string]: [any,boolean,boolean]}>;
 
@@ -14,7 +16,7 @@ export default class ChannelExchange {
     public readonly subscriptions: ReadonlySet<string>;
     public subscribe: (channel: string) => void;
     public unsubscribe: (channel: string) => void;
-    public publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
+    public publish: (channel: string, data: any, options: ComplexTypesOption & PublisherOption) => void;
 
     private readonly _publishEmitter: PublishEmitter = new EventEmitter();
     public readonly oncePublish: PublishEmitter['once'] = this._publishEmitter.once.bind(this._publishEmitter);
@@ -30,7 +32,7 @@ export default class ChannelExchange {
         subscriptions: ReadonlySet<string>,
         subscribe: (channel: string) => void,
         unsubscribe: (channel: string) => void,
-        publish: (channel: string, data: any, processComplexTypes?: boolean, publisher?: Socket) => void;
+        publish: (channel: string, data: any, options: ComplexTypesOption & PublisherOption) => void;
     }) {
         this.subscriptions = connector.subscriptions;
         this.subscribe = connector.subscribe;

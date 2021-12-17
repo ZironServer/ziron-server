@@ -15,3 +15,13 @@ export interface SkipGroupMemberOption {
      */
     skipMember?: Socket;
 }
+
+export interface PublisherOption {
+    /**
+     * @description
+     * Sets the publisher.
+     * Depending on the server option: publishToPublisher
+     * the publisher will get his own published data or not.
+     */
+    publisher?: Socket;
+}

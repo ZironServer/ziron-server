@@ -30,7 +30,9 @@ export default class InternalBroker {
             subscriptions: this.exchangeChannels,
             subscribe: this._exchangeSubscribe.bind(this),
             unsubscribe: this._exchangeUnsubscribe.bind(this),
-            publish: this.publish.bind(this)
+            publish: (channel,data,{publisher,processComplexTypes}) => {
+                this.publish(channel,data,processComplexTypes,publisher);
+            }
         });
     }
 
