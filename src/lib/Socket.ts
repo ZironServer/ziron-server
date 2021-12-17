@@ -21,7 +21,7 @@ import {
     DataType,
     InvokeListener,
     TransmitListener,
-    InvalidActionError
+    InvalidActionError, ComplexTypesOption, BatchOption, sendPackage
 } from "ziron-engine";
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "ziron-events";
 import {SignOptions} from "jsonwebtoken";
@@ -393,6 +393,17 @@ export default class Socket
             }
         }
         this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
+    }
+
+    /**
+     * @description
+     * Publishes in a channel with this socket as a publisher.
+     * @param channel
+     * @param data
+     * @param processComplexTypes
+     */
+    public publish(channel: string,data?: any,{processComplexTypes}: ComplexTypesOption = {}) {
+        this._server._internalBroker.publish(channel,data,processComplexTypes,this);
     }
 
     /**
