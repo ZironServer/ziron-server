@@ -26,8 +26,8 @@ import InternalBroker from "./broker/InternalBroker";
 import * as uniqId from "uniqid";
 import {EMPTY_FUNCTION} from "./Constants";
 import {FailedToListenError} from "./FailedToListenError";
-import enhanceHttpResponse, {HttpResponse} from "./EnhanceHttpResponse";
-import UpgradeRequest from "./UpgradeRequest";
+import enhanceHttpResponse, {HttpResponse} from "./http/EnhanceHttpResponse";
+import UpgradeRequest from "./http/UpgradeRequest";
 import {
     BatchOption,
     ComplexTypesOption,

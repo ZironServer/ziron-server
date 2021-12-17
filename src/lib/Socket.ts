@@ -27,7 +27,7 @@ import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmi
 import {SignOptions} from "jsonwebtoken";
 import {Block} from "./MiddlewareUtils";
 import {EMPTY_FUNCTION, NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
-import UpgradeRequest from "./UpgradeRequest";
+import UpgradeRequest from "./http/UpgradeRequest";
 import {WebSocket} from "ziron-ws";
 
 type LocalEventEmitter = EventEmitter<{

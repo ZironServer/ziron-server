@@ -4,7 +4,7 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import {UpgradeHeaders} from "./UpgradeRequest";
+import {UpgradeHeaders} from "./http/UpgradeRequest";
 
 export type Writable<T> = { -readonly [P in keyof T]: T[P] };
 
