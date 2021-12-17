@@ -414,8 +414,8 @@ export default class Socket
      * messages are not shared across multiple server instances.
      * Groups don't have their own special protocol and can be used to send a standard
      * transmit optimized to multiple sockets of a group.
-     * Additionally, groups support buffering transmits and send them in batches.
-     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * Additionally, the group transmits support batching when not using the skipMember option.
+     * Internally prepareMultiTransmit is used to create the transmit packet,
      * so binary data is supported.
      * @param group
      */
@@ -431,8 +431,8 @@ export default class Socket
      * messages are not shared across multiple server instances.
      * Groups don't have their own special protocol and can be used to send a standard
      * transmit optimized to multiple sockets of a group.
-     * Additionally, groups support buffering transmits and send them in batches.
-     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * Additionally, the group transmits support batching when not using the skipMember option.
+     * Internally prepareMultiTransmit is used to create the transmit packet,
      * so binary data is supported.
      * @param group
      */

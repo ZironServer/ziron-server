@@ -32,10 +32,11 @@ import {
     BatchOption,
     ComplexTypesOption,
     DynamicGroupTransport,
-    PING,
+    PING, sendPackage,
     Transport,
     TransportOptions
 } from "ziron-engine";
+import {SkipGroupMemberOption} from "./Options";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -129,7 +130,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     readonly _app: TemplatedApp;
     private _listenToken?: us_listen_socket | null;
     private _startListenPromise?: Promise<void> | null;
-    private readonly _groupTransport?: DynamicGroupTransport;
+    private readonly _groupTransport: DynamicGroupTransport;
 
     protected emitter: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>) = new EventEmitter();
     public readonly once: (EventEmitter<LocalEvents<ES>> & EventEmitter<E>)['once'] = this.emitter.once.bind(this.emitter);
@@ -260,7 +261,6 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         this._setUpSocketChLimit();
         this._app = this._setUpApp();
         this._groupTransport = this._createGroupTransport();
-        this.transmitToGroup = this._groupTransport.transmit.bind(this._groupTransport);
         this._startPingInterval();
         this._startAuthExpireCheck();
         this._setupHttpRequestHandling();
@@ -527,15 +527,22 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * messages are not shared across multiple server instances.
      * Groups don't have their own special protocol and can be used to send a standard
      * transmit optimized to multiple sockets of a group.
-     * Additionally, groups support buffering transmits and send them in batches.
-     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * Additionally, the group transmits support batching when not using the skipMember option.
+     * When using the skipMember option, the batch option will be ignored.
+     * Internally prepareMultiTransmit is used to create the transmit packet,
      * so binary data is supported.
      * @param group
      * @param receiver
      * @param data
      * @param options
      */
-    public readonly transmitToGroup: (group: string, receiver: string, data?: any, options?: ComplexTypesOption & BatchOption) => void;
+    public transmitToGroup(group: string, receiver: string, data?: any, options?: ComplexTypesOption & BatchOption & SkipGroupMemberOption) {
+        if(options?.skipMember) sendPackage(Transport.prepareMultiTransmit(receiver,data,options),
+            (msg, binary, batch) => {
+                options.skipMember?._socket.publish("G"+group,msg,binary,this._shouldCompress(msg,binary,batch));
+        });
+        else this._groupTransport.transmit(group,receiver,data,options);
+    }
 
     /**
      * @description
@@ -544,8 +551,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * messages are not shared across multiple server instances.
      * Groups don't have their own special protocol and can be used to send a standard
      * transmit optimized to multiple sockets of a group.
-     * Additionally, groups support buffering transmits and send them in batches.
-     * Internal prepareMultiTransmit is used to create the transmit packet,
+     * Additionally, the group transmits support batching when not using the skipMember option.
+     * Internally prepareMultiTransmit is used to create the transmit packet,
      * so binary data is supported.
      * @param group
      */
