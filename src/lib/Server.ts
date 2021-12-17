@@ -537,9 +537,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * @param options
      */
     public transmitToGroup(group: string, receiver: string, data?: any, options?: ComplexTypesOption & BatchOption & SkipGroupMemberOption) {
-        if(options?.skipMember) sendPackage(Transport.prepareMultiTransmit(receiver,data,options),
+        const skipMember = options?.skipMember;
+        if(skipMember) sendPackage(Transport.prepareMultiTransmit(receiver,data,options),
             (msg, binary, batch) => {
-                options.skipMember?._socket.publish("G"+group,msg,binary,this._shouldCompress(msg,binary,batch));
+                skipMember._socket.publish("G"+group,msg,binary,this._shouldCompress(msg,binary,batch));
         });
         else this._groupTransport.transmit(group,receiver,data,options);
     }
