@@ -141,7 +141,7 @@ export default class Socket
             send: this._sendRaw.bind(this),
             cork: this._cork.bind(this),
             onListenerError: err => this._emitter.emit('error',err),
-            onInvalidMessage: () => this._destroy(4400,'Bad message'),
+            onInvalidMessage: () => this.disconnect(4400,'Bad message'),
             onInvoke: this._onInvoke.bind(this),
             onTransmit: this._onTransmit.bind(this),
             hasLowSendBackpressure: this.hasLowSendBackpressure.bind(this)
