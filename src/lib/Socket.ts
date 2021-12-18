@@ -21,7 +21,7 @@ import {
     DataType,
     InvokeListener,
     TransmitListener,
-    InvalidActionError, ComplexTypesOption, BatchOption, sendPackage
+    InvalidActionError, ComplexTypesOption
 } from "ziron-engine";
 import {InternalServerProcedures, InternalServerReceivers, InternalServerTransmits} from "ziron-events";
 import {SignOptions} from "jsonwebtoken";
