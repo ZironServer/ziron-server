@@ -23,7 +23,7 @@
     "emitix": "^2.0.0",
     "@types/jsonwebtoken": "^8.5.6",
     "jsonwebtoken": "^8.5.1",
-    "ziron-ws": "20.5.0",
+    "ziron-ws": "20.6.0",
     "ziron-errors": "1.4.0",
     "ziron-events": "1.4.0",
     "ziron-engine": "2.1.0",
