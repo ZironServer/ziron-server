@@ -9,12 +9,17 @@ import {createOriginsChecker, OriginsChecker} from "./OriginsChecker";
 import AuthEngine from "./AuthEngine";
 import Socket from "./Socket";
 import {
-    SSLApp,
     App,
-    TemplatedApp,
     DISABLED,
     HttpRequest,
-    us_socket_context_t, WebSocket, us_listen_socket_close, us_listen_socket, HttpResponse as RawHttpResponse
+    HttpResponse as RawHttpResponse,
+    ListenOptions,
+    SSLApp,
+    TemplatedApp,
+    us_listen_socket,
+    us_listen_socket_close,
+    us_socket_context_t,
+    WebSocket
 } from 'ziron-ws';
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
@@ -32,7 +37,8 @@ import {
     BatchOption,
     ComplexTypesOption,
     DynamicGroupTransport,
-    PING, sendPackage,
+    PING,
+    sendPackage,
     Transport,
     TransportOptions
 } from "ziron-engine";
@@ -566,7 +572,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         if(!this._startListenPromise)
             return this._startListenPromise = new Promise<void>((res, rej) => {
                 const port = this.options.port;
-                this._app.listen(port,(token) => {
+                this._app.listen(port,ListenOptions.LIBUS_LISTEN_EXCLUSIVE_PORT,(token) => {
                     if(token) {
                         this._listenToken = token;
                         res();
