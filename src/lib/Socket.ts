@@ -149,8 +149,8 @@ export default class Socket
         this.transmit = this._transport.transmit.bind(this._transport);
         this.invoke = this._transport.invoke.bind(this._transport);
         this.sendPackage = this._transport.sendPackage.bind(this._transport);
-        this.flushBuffer = this._transport.buffer.flushBuffer.bind(this._transport);
-        this.getBufferSize = this._transport.buffer.getBufferSize.bind(this._transport);
+        this.flushBuffer = this._transport.buffer.flushBuffer.bind(this._transport.buffer);
+        this.getBufferSize = this._transport.buffer.getBufferSize.bind(this._transport.buffer);
         server.socketConstructorExtension(this);
     }
 
