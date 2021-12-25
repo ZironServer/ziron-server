@@ -39,7 +39,7 @@ export default class UpgradeRequest<T = any> {
         this.url = req.getUrl();
         this.method = req.getMethod();
 
-        const protocol = req.getHeader('sec-websocket-protocol');
+        const protocol = decodeURIComponent(req.getHeader('sec-websocket-protocol'));
         const protocolIndexOfAt = protocol.indexOf('@');
         const protocolName = protocolIndexOfAt === -1 ? protocol : protocol.substring(protocolIndexOfAt + 1);
 
