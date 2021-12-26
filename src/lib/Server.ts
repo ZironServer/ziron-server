@@ -483,7 +483,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private _setupHttpRequestHandling() {
         const healthPath = `${this.options.path}/health`;
 
-        this._app.any("/*",async (rawRes,req) => {
+        this._app.any("/*",(rawRes,req) => {
             (this as Writable<Server<E,ES>>).httpRequestCount++;
 
             const res = enhanceHttpResponse(rawRes);
@@ -505,25 +505,27 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             const path = req.getUrl().split('?')[0].split('#')[0];
 
             if(this.options.healthEndpoint && req.getMethod() === 'get' && path === healthPath)
-            {
-                let healthy: boolean = false;
-                try {healthy = await this.healthCheck()}
-                catch (err) {this._emit('error', err)}
-
-                if (res.aborted) return;
-                res.cork(() => {
-                    res.writeStatus(healthy ? "200 OK" : "500 Internal Server Error");
-                    res.headers['Content-Type'] = 'text/html';
-                    res.writeHeaders();
-                    res.end(healthy ? 'Healthy' : 'Unhealthy');
-                });
-            }
+                return this._processHttpHealthCheckRequest(res);
             else if(this.httpRequestHandler) this.httpRequestHandler(path,req,res);
             else res.cork(() => {
                 res.writeStatus('426 Upgrade Required');
                 res.end();
             })
         })
+    }
+
+    private async _processHttpHealthCheckRequest(res: HttpResponse) {
+        let healthy: boolean = false;
+        try {healthy = await this.healthCheck()}
+        catch (err) {this._emit('error', err)}
+
+        if (res.aborted) return;
+        res.cork(() => {
+            res.writeStatus(healthy ? "200 OK" : "500 Internal Server Error");
+            res.headers['Content-Type'] = 'text/html';
+            res.writeHeaders();
+            res.end(healthy ? 'Healthy' : 'Unhealthy');
+        });
     }
 
     /**
