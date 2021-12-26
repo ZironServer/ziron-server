@@ -213,6 +213,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * All HTTP requests (except health endpoint requests) will be answered
      * with 426 (Upgrade Required) when this property is undefined.
      * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
+     * @param path
+     * The requested path (always includes a prefix slash).
      */
     public httpRequestHandler?: (path: string,req: HttpRequest,res: HttpResponse) => Promise<any> | any;
 
