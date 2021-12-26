@@ -360,33 +360,33 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         },this.options.auth.expireCheckInterval ?? 12000);
     }
 
-    private static _abortConnection(res: RawHttpResponse, code: number, message: string): void {
+    private static _abortUpgrade(res: RawHttpResponse, code: number, message: string): void {
         res.end(`HTTP/1.1 ${code} ${message}\r\n\r\n`,true);
     }
 
     private _handleUpgrade(res: RawHttpResponse,req: HttpRequest,context: us_socket_context_t) {
         (this as Writable<Server<E,ES>>).httpRequestCount++;
 
-        if(this.refuseConnections) return Server._abortConnection(res,403,'Client verification failed');
+        if(this.refuseConnections) return Server._abortUpgrade(res,403,'Client verification failed');
+
+        let resAborted = false;
+        res.onAborted(() => resAborted = true);
 
         const reqPath = req.getUrl().split('?')[0].split('#')[0];
         if(reqPath !== this.options.path && reqPath !== this.options.path + '/')
-            return Server._abortConnection(res,400, 'URL not supported');
+            return Server._abortUpgrade(res,400, 'URL not supported');
 
         const origin = req.getHeader("origin");
         if(!this.originsChecker(origin)) {
             const err = new ServerProtocolError('Failed to authorize socket handshake - Invalid origin: ' + origin);
             this._emit('warning', err);
-            return Server._abortConnection(res,403,err.message);
+            return Server._abortUpgrade(res,403,err.message);
         }
 
         const upgradeRequest = new UpgradeRequest(req);
 
         if(upgradeRequest.headers.secWebSocketProtocol !== 'ziron')
-            Server._abortConnection(res,4800,'Unsupported protocol')
-
-        const upgradeAborted = {aborted: false};
-        res.onAborted(() => upgradeAborted.aborted = true);
+            Server._abortUpgrade(res,4800,'Unsupported protocol')
 
         const {
             secWebSocketKey,
@@ -398,15 +398,16 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             (async () => {
                 try {
                     await this.upgradeMiddleware!(upgradeRequest);
-                    res.upgrade({req: upgradeRequest}, secWebSocketKey,
+                    if(!resAborted) res.upgrade({req: upgradeRequest}, secWebSocketKey,
                         secWebSocketProtocol, secWebSocketExtensions, context);
                 }
                 catch (err) {
-                    if(err instanceof Block)
-                        Server._abortConnection(res, err.code, err.message || 'Handshake was blocked by handshake middleware');
+                    if(err instanceof Block) {
+                        if(!resAborted) Server._abortUpgrade(res, err.code, err.message || 'Handshake was blocked by handshake middleware');
+                    }
                     else {
                         this._emit('error', err);
-                        Server._abortConnection(res, err.code ?? 403,
+                        if(!resAborted) Server._abortUpgrade(res, err.code ?? 403,
                             'Handshake was blocked by handshake middleware');
                     }
                 }
