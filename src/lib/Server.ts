@@ -388,7 +388,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         const upgradeRequest = new UpgradeRequest(req);
 
         if(upgradeRequest.headers.secWebSocketProtocol !== 'ziron')
-            return Server._abortUpgrade(res,4800,'Unsupported protocol')
+            return Server._abortUpgrade(res,4800,'Unsupported protocol');
 
         const {
             secWebSocketKey,
