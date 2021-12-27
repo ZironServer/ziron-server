@@ -41,10 +41,10 @@ export default class UpgradeRequest<T = any> {
 
         const protocolHeader = (req.getHeader('sec-websocket-protocol') ?? '').split(",");
 
-        this.signedToken = protocolHeader.length > 1 ? decodeURIComponent(protocolHeader[1]) : null;
+        this.signedToken = protocolHeader.length > 1 ? decodeURIComponent(protocolHeader[1]).trim() : null;
         this.headers = {
             secWebSocketKey: req.getHeader('sec-websocket-key'),
-            secWebSocketProtocol: protocolHeader[0] ?? '',
+            secWebSocketProtocol: (protocolHeader[0] ?? '').trim(),
             secWebSocketExtensions: req.getHeader('sec-websocket-extensions'),
             origin: req.getHeader("origin"),
             xForwardedFor: req.getHeader('x-forwarded-for'),
