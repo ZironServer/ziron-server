@@ -449,9 +449,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 }
             }
 
-            let authTokenState;
+            let authTokenState = -1;
             if(signedToken) {
-                try {await zSocket._processAuthToken(signedToken)}
+                try {
+                    await zSocket._processAuthToken(signedToken);
+                    authTokenState = 0;
+                }
                 catch (err) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
             }
 
