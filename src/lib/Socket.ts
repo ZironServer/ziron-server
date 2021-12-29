@@ -298,14 +298,14 @@ export default class Socket
                       reject: (err?: any) => void, type: DataType)
     {
         if(this._server.ignoreFurtherInvokes) return;
-        (this._server as Writable<Server>).invokeCount++;
+        (this._server as Writable<Server>).invokeMessageCount++;
         if(this.procedures[procedure]) return this.procedures[procedure]!(data,end,reject,type);
         this.onUnknownInvoke(procedure,data,end,reject,type);
     }
 
     private _onTransmit(receiver: string,data: any,type: DataType) {
         if(this._server.ignoreFurtherTransmits) return;
-        (this._server as Writable<Server>).transmitCount++;
+        (this._server as Writable<Server>).transmitMessageCount++;
         if(this.receivers[receiver]) return this.receivers[receiver]!(data,type);
         this.onUnknownTransmit(receiver,data,type);
     }

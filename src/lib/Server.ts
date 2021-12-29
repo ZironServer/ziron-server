@@ -166,24 +166,24 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
     /**
      * @description
-     * This is a counter of received invokes.
-     * You can reset this counter with the resetInvokeCount method.
+     * This is a counter of received invoke messages.
+     * You can reset this counter with the resetInvokeMessageCount method.
      */
-    public readonly invokeCount: number = 0;
+    public readonly invokeMessageCount: number = 0;
 
     /**
      * @description
-     * This is a counter of received transmits.
-     * You can reset this counter with the resetTransmitCount method.
+     * This is a counter of received transmit messages.
+     * You can reset this counter with the resetTransmitMessageCount method.
      */
-    public readonly transmitCount: number = 0;
+    public readonly transmitMessageCount: number = 0;
 
     /**
      * @description
-     * This is a counter of HTTP requests.
-     * You can reset this counter with the resetHttpRequestCount method.
+     * This is a counter of HTTP messages.
+     * You can reset this counter with the resetHttpMessageCount method.
      */
-    public readonly httpRequestCount: number = 0;
+    public readonly httpMessageCount: number = 0;
 
     /**
      * @description
@@ -367,7 +367,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private _handleUpgrade(res: RawHttpResponse,req: HttpRequest,context: us_socket_context_t) {
-        (this as Writable<Server<E,ES>>).httpRequestCount++;
+        (this as Writable<Server<E,ES>>).httpMessageCount++;
 
         if(this.refuseConnections) return Server._abortUpgrade(res,403,'Client verification failed');
 
@@ -489,7 +489,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         const healthPath = `${this.options.path}/health`;
 
         this._app.any("/*",(rawRes,req) => {
-            (this as Writable<Server<E,ES>>).httpRequestCount++;
+            (this as Writable<Server<E,ES>>).httpMessageCount++;
 
             const res = enhanceHttpResponse(rawRes);
 
@@ -612,19 +612,19 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     resetWsMessageCount()  {(this as Writable<Server<E,ES>>).wsMessageCount = 0;}
-    resetInvokeCount()  {(this as Writable<Server<E,ES>>).invokeCount = 0;}
-    resetTransmitCount()  {(this as Writable<Server<E,ES>>).transmitCount = 0;}
-    resetHttpRequestCount()  {(this as Writable<Server<E,ES>>).httpRequestCount = 0;}
+    resetInvokeMessageCount()  {(this as Writable<Server<E,ES>>).invokeMessageCount = 0;}
+    resetTransmitMessageCount()  {(this as Writable<Server<E,ES>>).transmitMessageCount = 0;}
+    resetHttpMessageCount()  {(this as Writable<Server<E,ES>>).httpMessageCount = 0;}
 
     /**
      * @description
-     * Resets all counts (wsMessageCount,invokeCount,transmitCount and httpRequestCount).
+     * Resets all counts (wsMessageCount,invokeMessageCount,transmitMessageCount and httpMessageCount).
      */
     resetCounts() {
         (this as Writable<Server<E,ES>>).wsMessageCount = 0;
-        (this as Writable<Server<E,ES>>).invokeCount = 0;
-        (this as Writable<Server<E,ES>>).transmitCount = 0;
-        (this as Writable<Server<E,ES>>).httpRequestCount = 0;
+        (this as Writable<Server<E,ES>>).invokeMessageCount = 0;
+        (this as Writable<Server<E,ES>>).transmitMessageCount = 0;
+        (this as Writable<Server<E,ES>>).httpMessageCount = 0;
     }
 
     stopListen() {
