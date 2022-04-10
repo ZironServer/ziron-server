@@ -5,8 +5,11 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import ServerOptions, {CompressionOptions, Compressor, TLSOptions} from "./lib/ServerOptions";
-import Socket, {ProcedureListener, ProcedureEnd,
-    ProcedureReject, ReceiverListener} from "./lib/Socket";
+import Socket, {
+    ProcedureListener, ProcedureEnd,
+    ProcedureReject, ReceiverListener,
+    ReservedSocketProcedures, ReservedSocketReceivers
+} from "./lib/Socket";
 import {HttpRequest}             from "ziron-ws";
 import {HttpResponse}            from "./lib/http/EnhanceHttpResponse";
 import Server                    from "./lib/Server";
@@ -44,6 +47,8 @@ export {
     ProcedureEnd,
     ProcedureReject,
     ReceiverListener,
+    ReservedSocketProcedures,
+    ReservedSocketReceivers,
     AuthTokenExpiredError,
     AuthTokenInvalidError,
     AuthTokenError,

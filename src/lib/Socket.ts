@@ -43,6 +43,9 @@ export type ProcedureReject = (err?: any) => void;
 export type ProcedureListener = (data: any,end: ProcedureEnd, reject: ProcedureReject,
                                  type: DataType) => void | Promise<void>
 
+export type ReservedSocketReceivers = keyof InternalServerReceivers;
+export type ReservedSocketProcedures = keyof InternalServerProcedures;
+
 type Receivers =
     { readonly [key in InternalServerReceivers]: ReceiverListener } &
     {[key: string]: ReceiverListener | undefined}
