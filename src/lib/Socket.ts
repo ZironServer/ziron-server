@@ -29,6 +29,8 @@ import {Block} from "./MiddlewareUtils";
 import {EMPTY_FUNCTION, NOT_OPEN_FAILURE_FUNCTION} from "./Constants";
 import UpgradeRequest from "./http/UpgradeRequest";
 import {WebSocket} from "ziron-ws";
+import {Procedures} from "./Procedure";
+import {Receivers} from "./Receiver";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -36,23 +38,6 @@ type LocalEventEmitter = EventEmitter<{
     'disconnect': [number | undefined, any],
     'authTokenChange': [object | null,object | null]
 }>;
-
-export type ReceiverListener = (data: any, type: DataType) => void | Promise<void>;
-export type ProcedureEnd = (data?: any, processComplexTypes?: boolean) => void;
-export type ProcedureReject = (err?: any) => void;
-export type ProcedureListener = (data: any,end: ProcedureEnd, reject: ProcedureReject,
-                                 type: DataType) => void | Promise<void>
-
-export type ReservedSocketReceivers = keyof InternalServerReceivers;
-export type ReservedSocketProcedures = keyof InternalServerProcedures;
-
-type Receivers =
-    { readonly [key in InternalServerReceivers]: ReceiverListener } &
-    {[key: string]: ReceiverListener | undefined}
-
-type Procedures =
-    { readonly [key in InternalServerProcedures]: ProcedureListener } &
-    {[key: string]: ProcedureListener | undefined}
 
 export default class Socket
 {
