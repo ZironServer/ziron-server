@@ -20,13 +20,14 @@ export type Procedures<R extends string = never> =
     {readonly [key in InternalServerProcedures]: Procedure} &
     {readonly [key in R]: never} & {[key: string]: Procedure | undefined};
 export type StandaloneProcedures<R extends string = never> =
-    { readonly [key in InternalServerProcedures]: never } &
-    {readonly [key in R]: never} & Record<string,StandaloneProcedure>;
+    { readonly [key in InternalServerProcedures]?: never } &
+    {readonly [key in R]?: never} & Record<string,StandaloneProcedure>;
 
 export function applyStandaloneProcedures(socket: Socket, procedures: StandaloneProcedures) {
     for(const name in procedures) {
         if(!procedures.hasOwnProperty(name)) continue;
         const procedure = procedures[name];
+        if(!procedure) continue;
         socket.procedures[name] = (data,end,reject,type) =>
             procedure(socket,data,end,reject,type);
     }

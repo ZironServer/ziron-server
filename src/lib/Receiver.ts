@@ -15,13 +15,14 @@ export type Receivers<R extends string = never> =
     {readonly [key in InternalServerReceivers]: Receiver} &
     {readonly [key in R]: never} & {[key: string]: Receiver | undefined};
 export type StandaloneReceivers<R extends string = never> =
-    { readonly [key in InternalServerReceivers]: never } &
-    {readonly [key in R]: never} & Record<string,StandaloneReceiver>;
+    { readonly [key in InternalServerReceivers]?: never } &
+    {readonly [key in R]?: never} & Record<string,StandaloneReceiver>;
 
 export function applyStandaloneReceivers(socket: Socket, receivers: StandaloneReceivers) {
     for(const name in receivers) {
         if(!receivers.hasOwnProperty(name)) continue;
         const receiver = receivers[name];
+        if(!receiver) continue;
         socket.receivers[name] = (data,type) => receiver(socket,data,type);
     }
 }
