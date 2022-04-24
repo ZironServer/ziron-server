@@ -638,6 +638,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         }
     }
 
+    isListening() {
+        return !!this._listenToken;
+    }
+
     /**
      * Terminates the server.
      * After termination, you should not use this instance anymore
