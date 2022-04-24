@@ -126,6 +126,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         return this.options.path;
     }
 
+    get tlsActive(): boolean {
+        return this.options.tls != null;
+    }
+
     private _authTokenExpireCheckerTicker: NodeJS.Timeout;
     private _pingTicker: NodeJS.Timeout;
 
