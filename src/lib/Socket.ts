@@ -413,6 +413,24 @@ export default class Socket
 
     /**
      * @description
+     * Returns if the socket has joined the group.
+     * Instead of channels, groups can only be accessed and controlled from the server-side and
+     * messages are not shared across multiple server instances.
+     * Groups don't have their own special protocol and can be used to send a standard
+     * transmit optimized to multiple sockets of a group.
+     * Additionally, the group transmits support batching when not using the skipMember option.
+     * Internally prepareMultiTransmit is used to create the transmit packet,
+     * so binary data is supported.
+     * @param group
+     */
+    public hasJoined(group: string): boolean {
+        //The socket is not open, so it's not a subscriber anymore.
+        if(!this.open) return false;
+        return this._socket.isSubscribed("G" + group);
+    }
+
+    /**
+     * @description
      * Leaves a group.
      * Let the socket leave a group that follows the pub/sub mechanism.
      * Instead of channels, groups can only be accessed and controlled from the server-side and
