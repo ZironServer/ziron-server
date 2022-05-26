@@ -320,7 +320,7 @@ export default class Socket
                     if(err instanceof Block) return reject(err);
                     else {
                         this._server._emit('error', err);
-                        return reject(new Block("Subscribe was blocked by the subscribe middleware"));
+                        return reject(new Block(4403,"Subscribe was blocked by the subscribe middleware"));
                     }
                 }
             }
@@ -360,7 +360,7 @@ export default class Socket
                 if(err instanceof Block) return reject(err);
                 else {
                     this._server._emit('error', err);
-                    return reject(new Block("Publish was blocked by the publish in middleware"))
+                    return reject(new Block(4403,"Publish was blocked by the publish in middleware"))
                 }
             }
         }

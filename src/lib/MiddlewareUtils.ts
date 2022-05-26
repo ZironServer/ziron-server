@@ -12,9 +12,9 @@ export class Block {
     toString() {return `${this.name} (${this.code}): ${this.message}`;}
 
     constructor()
-    constructor(code: number, message?: string)
-    constructor(name: string ,message?: string, code?: number)
-    constructor(nameOrCode?: string | number,message?: string, code?: number) {
+    constructor(code: number | null, message?: string)
+    constructor(name: string | null, message?: string, code?: number)
+    constructor(nameOrCode?: string | number | null,message?: string, code?: number) {
         if(typeof nameOrCode === 'number') {
             this.name = 'MiddlewareBlock';
             this.code = nameOrCode;
