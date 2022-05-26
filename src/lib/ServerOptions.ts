@@ -120,6 +120,12 @@ export interface TLSOptions {
     certFile?: RecognizedString;
     /**
      * @description
+     * The file that contains multiple trusted certificates
+     * in PEM format concatenated together.
+     */
+    caFile?: RecognizedString;
+    /**
+     * @description
      * The file that contains the private key.
      */
     keyFile?: RecognizedString;

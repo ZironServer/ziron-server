@@ -331,6 +331,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         return (tls ? SSLApp({
             key_file_name: tls.keyFile,
             cert_file_name: tls.certFile,
+            ca_file_name: tls.caFile,
             passphrase: tls.passphrase,
             dh_params_file_name: tls.dhParamsFile,
             ssl_prefer_low_memory_usage: tls.releaseBuffersMode
@@ -348,7 +349,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             message: this._handleWsMessage.bind(this),
             drain: Server._handleWsDrain,
             close: Server._handleWsClose,
-            sendPingsAutomatically: 0
+            sendPingsAutomatically: false
         });
     }
 
