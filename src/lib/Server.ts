@@ -409,12 +409,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 }
                 catch (err) {
                     if(err instanceof Block) {
-                        if(!resAborted) Server._abortUpgrade(res, err.code, err.message || 'Handshake was blocked by handshake middleware');
+                        if(!resAborted) Server._abortUpgrade(res, err.code, err.message || 'Handshake was blocked by the handshake middleware');
                     }
                     else {
                         this._emit('error', err);
                         if(!resAborted) Server._abortUpgrade(res, err.code ?? 403,
-                            'Handshake was blocked by handshake middleware');
+                            'Handshake was blocked by the handshake middleware');
                     }
                 }
             })();
@@ -444,10 +444,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 try {await this.socketMiddleware(zSocket as ES);}
                 catch (err) {
                     if(err instanceof Block)
-                        zSocket.disconnect(err.code,err.message || 'Connection was blocked by socket middleware');
+                        zSocket.disconnect(err.code,err.message || 'Connection was blocked by the socket middleware');
                     else {
                         this._emit('error', err);
-                        zSocket.disconnect(err.code ?? 4403,'Connection was blocked by socket middleware');
+                        zSocket.disconnect(err.code ?? 4403,'Connection was blocked by the socket middleware');
                     }
                     return;
                 }

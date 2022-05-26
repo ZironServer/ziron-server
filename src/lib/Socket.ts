@@ -317,10 +317,10 @@ export default class Socket
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
                 catch (err) {
-                    if(err instanceof Block) return end(err);
+                    if(err instanceof Block) return reject(err);
                     else {
                         this._server._emit('error', err);
-                        return end(4403);
+                        return reject(new Block("Subscribe was blocked by the subscribe middleware"));
                     }
                 }
             }
@@ -357,10 +357,10 @@ export default class Socket
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
             catch (err) {
-                if(err instanceof Block) return end(err);
+                if(err instanceof Block) return reject(err);
                 else {
                     this._server._emit('error', err);
-                    return end(4403);
+                    return reject(new Block("Publish was blocked by the publish in middleware"))
                 }
             }
         }
