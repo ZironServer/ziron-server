@@ -8,8 +8,9 @@ import {HttpResponse as RawHttpResponse} from "ziron-ws";
 import {createReadStream, statSync} from "fs";
 import {lockupMimeType} from "./MimeLockup";
 
-export type HttpResponse = {
-  writeHeaders: (headers: Record<string,string>) => HttpResponse;
+export type HttpResponse = Omit<RawHttpResponse,'writeHeader'> & {
+  headers: Record<string,string>;
+  writeHeaders: () => void;
   aborted?: boolean;
   ended?: boolean;
   writeFile: (path: string,reqHeaders?: {
@@ -18,7 +19,7 @@ export type HttpResponse = {
           'accept-encoding'?: string
       },handleLastModified?: boolean) => void;
   redirect: (location: string) => void;
-} & RawHttpResponse;
+};
 
 export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpResponse>): HttpResponse {
     const originalEnd = res.end.bind(res);
@@ -34,10 +35,8 @@ export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpR
         return [ok, done]
     };
     res.onAborted(() => {res.aborted = true;});
-    res.writeHeaders = (headers) => {
-        writeResponseHeaders(res,headers);
-        return res as unknown as HttpResponse;
-    };
+    res.writeHeaders = () => writeResponseHeaders(res,res.headers);
+    res.headers = {};
     res.writeFile = (path,reqHeaders,handleLastModified) =>
         sendFileToRes(res as unknown as HttpResponse,path,reqHeaders,handleLastModified);
     res.redirect = (location) => writeResponseRedirection(res,location);
@@ -65,7 +64,8 @@ export function writeResponseHeaders(res: RawHttpResponse, headers: {[name: stri
 export function writeResponseRedirection(res: RawHttpResponse,location: string) {
     res.cork(() => {
         res.writeStatus("302 Found");
-        res.writeHeader('Location',location);
+        res.headers['Location'] = location;
+        res.writeHeaders();
         res.end();
     });
 }
@@ -95,7 +95,6 @@ export function sendFileToRes(res: HttpResponse,
     let {mtime, size} = statSync(path);
     mtime.setMilliseconds(0);
     const mtimeUtc = mtime.toUTCString();
-    const resHeaders = {};
 
     if(handleLastModified) {
         if(reqHeaders['if-modified-since']) {
@@ -106,9 +105,9 @@ export function sendFileToRes(res: HttpResponse,
                 })
             }
         }
-        resHeaders['last-modified'] = mtimeUtc;
+        res.headers['last-modified'] = mtimeUtc;
     }
-    resHeaders['content-type'] = lockupMimeType(path);
+    res.headers['content-type'] = lockupMimeType(path);
 
     //write
     let start = 0, end = size - 1;
@@ -116,8 +115,8 @@ export function sendFileToRes(res: HttpResponse,
         const parts = reqHeaders.range.replace(BYTES_PREFIX, '').split('-');
         start = parseInt(parts[0], 10);
         end = parts[1] ? parseInt(parts[1], 10) : end;
-        resHeaders['accept-ranges'] = 'bytes';
-        resHeaders['content-range'] = `bytes ${start}-${end}/${size}`;
+        res.headers['accept-ranges'] = 'bytes';
+        res.headers['content-range'] = `bytes ${start}-${end}/${size}`;
         size = end - start + 1;
         res.writeStatus('206 Partial Content');
     }
@@ -125,7 +124,7 @@ export function sendFileToRes(res: HttpResponse,
     if(end < 0) end = 0;
     const readStream = createReadStream(path,{start, end});
 
-    res.writeHeaders(resHeaders);
+    res.writeHeaders();
     res.onAborted(() => {readStream.destroy();});
 
     readStream.on('data', (buffer: Buffer) => {
