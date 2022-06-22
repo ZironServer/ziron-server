@@ -8,18 +8,19 @@ import {HttpResponse as RawHttpResponse} from "ziron-ws";
 import {createReadStream, statSync} from "fs";
 import {lockupMimeType} from "./MimeLockup";
 
-export type HttpResponse = Omit<RawHttpResponse,'writeHeader'> & {
-  headers: Record<string,string>;
-  writeHeaders: () => void;
-  aborted?: boolean;
-  ended?: boolean;
-  writeFile: (path: string,reqHeaders?: {
-          'if-modified-since'?: string,
-          range?: string,
-          'accept-encoding'?: string
-      },handleLastModified?: boolean) => void;
-  redirect: (location: string) => void;
-};
+export interface HttpResponse extends RawHttpResponse {
+    headers: Record<string,string>;
+    writeHeader: any;
+    writeHeaders: (extraHeaders?: Record<string,string>) => HttpResponse;
+    aborted?: boolean;
+    ended?: boolean;
+    writeFile: (path: string,reqHeaders?: {
+        'if-modified-since'?: string,
+        range?: string,
+        'accept-encoding'?: string
+    },handleLastModified?: boolean) => void;
+    redirect: (location: string) => void;
+}
 
 export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpResponse>): HttpResponse {
     const originalEnd = res.end.bind(res);
@@ -35,8 +36,12 @@ export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpR
         return [ok, done]
     };
     res.onAborted(() => {res.aborted = true;});
-    res.writeHeaders = () => writeResponseHeaders(res,res.headers);
     res.headers = {};
+    res.writeHeaders = (extraHeaders) => {
+        if(extraHeaders) Object.assign(res.headers,extraHeaders);
+        writeResponseHeaders(res,res.headers);
+        return res as HttpResponse;
+    };
     res.writeFile = (path,reqHeaders,handleLastModified) =>
         sendFileToRes(res as unknown as HttpResponse,path,reqHeaders,handleLastModified);
     res.redirect = (location) => writeResponseRedirection(res,location);
