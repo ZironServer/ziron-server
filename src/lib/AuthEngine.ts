@@ -64,6 +64,7 @@ export default class AuthEngine {
     };
 
     private _defaultSignOptions: SignOptions;
+    private _defaultSignOptionsWithoutExp: SignOptions;
     private _defaultVerifyOptions: VerifyOptions;
     private _signatureKey: string;
     private _verificationKey:  string;
@@ -94,9 +95,12 @@ export default class AuthEngine {
             this._verificationKey = this._options.secretKey;
         }
 
+        this._defaultSignOptionsWithoutExp = {
+            ...(this._options.algorithm != null ? {algorithm: this._options.algorithm} : {}),
+        }
         this._defaultSignOptions = {
+            ...this._defaultSignOptionsWithoutExp,
             expiresIn: this._options.defaultExpiry,
-            ...(this._options.algorithm != null ? {algorithm: this._options.algorithm} : {})
         };
 
         this._defaultVerifyOptions = {
@@ -133,8 +137,10 @@ export default class AuthEngine {
     public async signToken(token: any, options: SignOptions = {}): Promise<string> {
         return new Promise((resolve, reject) => {
             sign(token, this._signatureKey,
-                Object.assign({}, this._defaultSignOptions ,options), (err, signedToken) =>
-            {
+                Object.assign({},
+                    (typeof token === 'object' && token.exp != null) ?
+                        this._defaultSignOptionsWithoutExp : this._defaultSignOptions, options),
+                (err, signedToken) => {
                 err ? reject(err) : resolve(signedToken);
             });
         });
