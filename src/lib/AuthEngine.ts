@@ -97,6 +97,7 @@ export default class AuthEngine {
 
         this._defaultSignOptionsWithoutExp = {
             ...(this._options.algorithm != null ? {algorithm: this._options.algorithm} : {}),
+            mutatePayload: true
         }
         this._defaultSignOptions = {
             ...this._defaultSignOptionsWithoutExp,
