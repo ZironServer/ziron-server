@@ -42,6 +42,7 @@ import {
     TransportOptions
 } from "ziron-engine";
 import {SkipGroupMemberOption} from "./Options";
+import enhanceHttpRequest from "./http/EnhanceHttpRequest";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -214,13 +215,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     /**
      * @description
      * Set this property to handle HTTP requests.
-     * All HTTP requests (except health endpoint requests) will be answered
-     * with 426 (Upgrade Required) when this property is undefined.
-     * Notice that the health endpoint (when activated) is always reachable even if you set a httpRequestHandler.
-     * @param path
-     * The requested path (always includes a prefix slash).
+     * Notice that firstly Ziron checks the origin and catches and processes health endpoint requests.
+     * The handler will be called when the request is not answered after the Ziron pipeline.
+     * If the response was not ended after the Ziron pipeline and the handler call
+     * Ziron responds with a 426 (Upgrade Required) response.
      */
-    public httpRequestHandler?: (path: string,req: HttpRequest,res: HttpResponse) => Promise<any> | any;
+    public httpRequestHandler?: (req: HttpRequest,res: HttpResponse) => Promise<any> | any;
 
     /**
      * @description
@@ -493,10 +493,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private _setupHttpRequestHandling() {
         const healthPath = `${this.options.path}/health`;
 
-        this._app.any("/*",(rawRes,req) => {
+        this._app.any("/*",(rawRes,rawReq) => {
             (this as Writable<Server<E,ES>>).httpMessageCount++;
 
-            const res = enhanceHttpResponse(rawRes);
+            const req = enhanceHttpRequest(rawReq),res = enhanceHttpResponse(rawRes);
 
             const origin = req.getHeader("origin");
             if(this.originsChecker(origin)){
@@ -512,15 +512,14 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 res.end('Failed - Invalid origin: ' + origin);
             });
 
-            const path = req.getUrl().split('?')[0].split('#')[0];
-
-            if(this.options.healthEndpoint && req.getMethod() === 'get' && path === healthPath)
+            if(this.options.healthEndpoint && req.getMethod() === 'get' && req.getPath() === healthPath)
                 return this._processHttpHealthCheckRequest(res);
-            else if(this.httpRequestHandler) this.httpRequestHandler(path,req,res);
-            else res.cork(() => {
+            else if(this.httpRequestHandler) this.httpRequestHandler(req,res);
+
+            if(!res.closed) res.cork(() => {
                 res.writeStatus('426 Upgrade Required');
                 res.end();
-            })
+            });
         })
     }
 

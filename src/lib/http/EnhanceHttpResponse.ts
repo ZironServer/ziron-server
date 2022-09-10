@@ -7,19 +7,55 @@ Copyright(c) Ing. Luca Gian Scaringella
 import {HttpResponse as RawHttpResponse} from "ziron-ws";
 import {createReadStream, statSync} from "fs";
 import {lockupMimeType} from "./MimeLockup";
+import {Writable} from "../Utils";
 
 export interface HttpResponse extends RawHttpResponse {
-    headers: Record<string,string>;
-    writeHeader: any;
-    writeHeaders: (extraHeaders?: Record<string,string>) => HttpResponse;
-    aborted?: boolean;
-    ended?: boolean;
-    writeFile: (path: string,reqHeaders?: {
+    /**
+     * @description
+     * This object can be used to set the headers of the response.
+     * Notice that writeHeaders must be called afterwards to write the headers from the object.
+     */
+    readonly headers: Record<string,string>;
+    readonly writeHeader: any;
+    /**
+     * @description
+     * Writes all headers from the headers object.
+     * Optionally you can pass additional headers as the first parameter.
+     */
+    readonly writeHeaders: (extraHeaders?: Record<string,string>) => HttpResponse;
+    /**
+     * @description
+     * Indicates if the response is aborted.
+     * After waiting for some async operations,
+     * you should check this property before using the response again.
+     */
+    readonly aborted?: boolean;
+    /**
+     * @description
+     * Indicates whether the response ended successfully.
+     * Note that you should not use the response if this property is true.
+     */
+    readonly ended?: boolean;
+    /**
+     * @description
+     * Indicates whether the response is closed,
+     * which means that it was either completed successfully or aborted.
+     */
+    readonly closed: boolean;
+    /**
+     * @description
+     * Sends back a file and finishes the response.
+     */
+    readonly writeFile: (path: string,reqHeaders?: {
         'if-modified-since'?: string,
         range?: string,
         'accept-encoding'?: string
     },handleLastModified?: boolean) => void;
-    redirect: (location: string) => void;
+    /**
+     * @description
+     * Sends a redirect to another location and finishes the response.
+     */
+    readonly redirect: (location: string) => void;
 }
 
 export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpResponse>): HttpResponse {
@@ -27,24 +63,30 @@ export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpR
     const originalTryEnd = res.tryEnd.bind(res);
     res.end = (...args) => {
         originalEnd(...args);
-        res.ended = true;
+        (res as Writable<HttpResponse>).ended = true;
         return res;
     };
     res.tryEnd = (...args) => {
         const [ok, done] = originalTryEnd(...args);
-        res.ended = done;
+        (res as Writable<HttpResponse>).ended = done;
         return [ok, done]
     };
-    res.onAborted(() => {res.aborted = true;});
-    res.headers = {};
-    res.writeHeaders = (extraHeaders) => {
+    res.onAborted(() => {
+        (res as Writable<HttpResponse>).aborted = true;
+    });
+    Object.defineProperty(res,
+        'closed' as keyof HttpResponse,
+        {get: () => !!(res.ended || res.aborted)}
+    );
+    (res as Writable<HttpResponse>).headers = {};
+    (res as Writable<HttpResponse>).writeHeaders = (extraHeaders) => {
         if(extraHeaders) Object.assign(res.headers,extraHeaders);
         writeResponseHeaders(res,res.headers);
         return res as HttpResponse;
     };
-    res.writeFile = (path,reqHeaders,handleLastModified) =>
+    (res as Writable<HttpResponse>).writeFile = (path,reqHeaders,handleLastModified) =>
         sendFileToRes(res as unknown as HttpResponse,path,reqHeaders,handleLastModified);
-    res.redirect = (location) => writeResponseRedirection(res,location);
+    (res as Writable<HttpResponse>).redirect = (location) => writeResponseRedirection(res,location);
     return res as unknown as HttpResponse;
 }
 

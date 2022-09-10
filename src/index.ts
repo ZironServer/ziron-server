@@ -8,7 +8,7 @@ import ServerOptions, {CompressionOptions, Compressor, TLSOptions} from "./lib/S
 import { Procedure, ProcedureEnd, ProcedureReject, StandaloneProcedure, applyStandaloneProcedures } from "./lib/Procedure";
 import { Receiver, StandaloneReceiver, applyStandaloneReceivers } from "./lib/Receiver";
 import Socket                    from "./lib/Socket";
-import {HttpRequest}             from "ziron-ws";
+import {HttpRequest}             from "./lib/http/EnhanceHttpRequest";
 import {HttpResponse}            from "./lib/http/EnhanceHttpResponse";
 import Server                    from "./lib/Server";
 import AuthEngine                from "./lib/AuthEngine";
