@@ -11,7 +11,7 @@ import Socket from "./Socket";
 import {
     App,
     DISABLED,
-    HttpRequest,
+    HttpRequest as RawHttpRequest,
     HttpResponse as RawHttpResponse,
     SSLApp,
     TemplatedApp,
@@ -42,7 +42,7 @@ import {
     TransportOptions
 } from "ziron-engine";
 import {SkipGroupMemberOption} from "./Options";
-import enhanceHttpRequest from "./http/EnhanceHttpRequest";
+import enhanceHttpRequest, {HttpRequest} from "./http/EnhanceHttpRequest";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -371,7 +371,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         res.end(`HTTP/1.1 ${code} ${message}\r\n\r\n`,true);
     }
 
-    private _handleUpgrade(res: RawHttpResponse,req: HttpRequest,context: us_socket_context_t) {
+    private _handleUpgrade(res: RawHttpResponse,req: RawHttpRequest,context: us_socket_context_t) {
         (this as Writable<Server<E,ES>>).httpMessageCount++;
 
         if(this.refuseConnections) return Server._abortUpgrade(res,403,'Client verification failed');
