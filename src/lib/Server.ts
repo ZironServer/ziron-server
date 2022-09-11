@@ -217,8 +217,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      * Set this property to handle HTTP requests.
      * Notice that firstly Ziron checks the origin and catches and processes health endpoint requests.
      * The handler will be called when the request is not answered after the Ziron pipeline.
-     * If the response was not ended after the Ziron pipeline and the handler call
-     * Ziron responds with a 426 (Upgrade Required) response.
+     * If the response is still available after the Ziron pipeline and
+     * the handler call Ziron responds with a 426 (Upgrade Required) response.
      */
     public httpRequestHandler?: (req: HttpRequest,res: HttpResponse) => Promise<any> | any;
 
@@ -493,7 +493,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private _setupHttpRequestHandling() {
         const healthPath = `${this.options.path}/health`;
 
-        this._app.any("/*",(rawRes,rawReq) => {
+        this._app.any("/*",async (rawRes,rawReq) => {
             (this as Writable<Server<E,ES>>).httpMessageCount++;
 
             const req = enhanceHttpRequest(rawReq),res = enhanceHttpResponse(rawRes);
@@ -514,9 +514,9 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
             if(this.options.healthEndpoint && req.getMethod() === 'get' && req.getPath() === healthPath)
                 return this._processHttpHealthCheckRequest(res);
-            else if(this.httpRequestHandler) this.httpRequestHandler(req,res);
+            else if(this.httpRequestHandler) await this.httpRequestHandler(req,res);
 
-            if(!res.closed) res.cork(() => {
+            if(res.available) res.cork(() => {
                 res.writeStatus('426 Upgrade Required');
                 res.end();
             });
@@ -528,7 +528,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         try {healthy = await this.healthCheck()}
         catch (err) {this._emit('error', err)}
 
-        if (res.aborted) return;
+        if (!res.available) return;
         res.cork(() => {
             res.writeStatus(healthy ? "200 OK" : "500 Internal Server Error");
             res.headers['Content-Type'] = 'text/html';
