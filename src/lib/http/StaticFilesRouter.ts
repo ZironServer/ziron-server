@@ -69,21 +69,24 @@ export default class StaticFilesRouter {
     /**
      * @description
      * Handles the incoming request.
-     * Returns if response was handled.
+     * Returns false when the response cannot be handled or a
+     * truthy value when the response can be handled.
+     * The truthy value is either a promise object
+     * (that resolves when the file writing has been finished) or
+     * a true bool value when a redirect response has been sent.
      * @param req
      * @param res
      */
-    handle(req: HttpRequest,res: HttpResponse): boolean {
+    handle(req: HttpRequest,res: HttpResponse): boolean | Promise<void> {
         if(req.getMethod() === 'get') {
             const url = req.getUrl();
             const file = this.files[url];
             if(file != null) {
-                res.writeFile(file,{
+                return res.writeFile(file,{
                     'if-modified-since': req.getHeader('if-modified-since'),
                     range: req.getHeader('range'),
                     'accept-encoding': req.getHeader('accept-encoding')
-                },true)
-                return true;
+                },true);
             }
             else if(url.endsWith("/") && this.files[url.slice(0,-1)] != null) {
                 res.redirect(url.slice(0,-1));
