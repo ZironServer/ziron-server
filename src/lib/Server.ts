@@ -43,6 +43,7 @@ import {
 } from "ziron-engine";
 import {SkipGroupMemberOption} from "./Options";
 import enhanceHttpRequest, {HttpRequest} from "./http/EnhanceHttpRequest";
+import {CustomWebSocket} from "./CustomWebSocket";
 
 type LocalEvents<S extends Socket> = {
     'error': [Error],
@@ -424,7 +425,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             secWebSocketProtocol, secWebSocketExtensions, context);
     }
 
-    private async _handleWsOpen(ws: WebSocket) {
+    private async _handleWsOpen(ws: CustomWebSocket) {
 
         let zSocket: Socket;
         //Socket constructor extension is used in the constructor.
@@ -474,18 +475,18 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         }
     }
 
-    private _handleWsMessage(ws: WebSocket, message: ArrayBuffer, isBinary: boolean) {
+    private _handleWsMessage(ws: CustomWebSocket, message: ArrayBuffer, isBinary: boolean) {
         (this as Writable<Server<E,ES>>).wsMessageCount++;
         const zSocket: Socket = ws.zSocket;
         if(zSocket) zSocket._emitMessage(isBinary ? message : Buffer.from(message).toString());
     }
 
-    private static _handleWsDrain(ws: WebSocket) {
+    private static _handleWsDrain(ws: CustomWebSocket) {
         const zSocket: Socket = ws.zSocket;
         if(zSocket) zSocket._emitDrain();
     }
 
-    private static _handleWsClose(ws: WebSocket, code: number, message: ArrayBuffer) {
+    private static _handleWsClose(ws: CustomWebSocket, code: number, message: ArrayBuffer) {
         const zSocket: Socket = ws.zSocket;
         if(zSocket) zSocket._emitClose(code,Buffer.from(message).toString());
     }

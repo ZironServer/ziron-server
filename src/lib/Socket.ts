@@ -31,6 +31,7 @@ import UpgradeRequest from "./http/UpgradeRequest";
 import {WebSocket} from "ziron-ws";
 import {Procedures} from "./Procedure";
 import {Receivers} from "./Receiver";
+import {CustomWebSocket} from "./CustomWebSocket";
 
 type LocalEventEmitter = EventEmitter<{
     'error': [Error],
@@ -92,7 +93,7 @@ export default class Socket
     /**
      * @internal
      */
-    readonly _socket: WebSocket;
+    readonly _socket: CustomWebSocket;
 
     readonly upgradeRequest: UpgradeRequest;
 
@@ -116,7 +117,7 @@ export default class Socket
 
     private readonly _transport: Transport;
 
-    constructor(server: Server<any,any>, socket: WebSocket) {
+    constructor(server: Server<any,any>, socket: CustomWebSocket) {
         this._server = server;
         this._socket = socket;
         this.upgradeRequest = socket.req;
