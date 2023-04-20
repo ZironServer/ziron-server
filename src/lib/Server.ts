@@ -344,7 +344,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             ...({
                 closeOnBackpressureLimit: 1
             } as any),
-            idleTimeout: Math.min(Math.ceil((this.options.pingInterval / 1000) * 2),960),
+            idleTimeout: Math.max(8,Math.min(Math.ceil((this.options.pingInterval / 1000) * 2),960)),
             upgrade: this._handleUpgrade.bind(this),
             open: this._handleWsOpen.bind(this),
             message: this._handleWsMessage.bind(this),
