@@ -84,7 +84,7 @@ export default class StaticFilesRouter {
      */
     handle(req: HttpRequest,res: HttpResponse): false | Promise<void> {
         if(req.getMethod() === 'get') {
-            const url = req.getUrl();
+            const url = decodeURI(req.getUrl());
             const file = this.files[url];
             if(file != null) {
                 if(file.contentType != null) 
