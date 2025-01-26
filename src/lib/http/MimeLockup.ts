@@ -172,10 +172,10 @@ const MIME_TYPES_LOOKUP = {
     yaml: 'text/yaml',
     yml: 'text/yaml',
     zip: 'application/zip',
-    default: 'text/html'
+    webm:"video/webm"
 };
 
-export const lockupMimeType = (path: string): string => {
-    return MIME_TYPES_LOOKUP[path.substr(path.lastIndexOf('.') + 1).toLowerCase()]
-        || MIME_TYPES_LOOKUP['default'];
+export const lockupMimeType = (path: string, customMap?: Record<string,string>): string | null => {
+    const extension = path.substring(path.lastIndexOf('.') + 1).toLowerCase();
+    return MIME_TYPES_LOOKUP[extension] || (customMap && customMap[extension]) || null;
 };

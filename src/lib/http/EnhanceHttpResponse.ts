@@ -113,7 +113,7 @@ export default function enhanceHttpResponse(res: RawHttpResponse & Partial<HttpR
     }
     (res as Writable<HttpResponse>).headers = {};
     (res as Writable<HttpResponse>).writeHeaders = (extraHeaders) => {
-        if(extraHeaders) Object.assign(res.headers,extraHeaders);
+        if(extraHeaders) Object.assign(res.headers!,extraHeaders);
         writeResponseHeaders(res,res.headers);
         return res as HttpResponse;
     };
@@ -168,7 +168,8 @@ export async function sendFileToRes(res: HttpResponse,
                                   range?: string,
                                   'accept-encoding'?: string
                               } = {},
-                              handleLastModified = true) : Promise<void>
+                              handleLastModified = true
+                            ) : Promise<void>
 {
     if(!res.available) throw new Error("A file can not be sent to an unavailable response.")
     res.reserve();
@@ -189,7 +190,13 @@ export async function sendFileToRes(res: HttpResponse,
         }
         res.headers['last-modified'] = mtimeUtc;
     }
-    res.headers['content-type'] = lockupMimeType(path);
+
+    //Try set content type based on locked up mime type
+    if(!res.headers['content-type']) {
+        const lookedUpType = lockupMimeType(path);
+        if(lookedUpType != null) 
+            res.headers['content-type'] = lookedUpType;
+    }
 
     //write
     return new Promise((resolve,reject) => {

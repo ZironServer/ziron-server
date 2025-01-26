@@ -8,6 +8,7 @@ import {HttpRequest} from "ziron-ws";
 import {join,basename} from "path";
 import {readdirSync, statSync} from 'fs';
 import {HttpResponse as HttpResponse} from "./EnhanceHttpResponse";
+import {lockupMimeType} from "./MimeLockup";
 
 /**
  * @description
@@ -15,7 +16,11 @@ import {HttpResponse as HttpResponse} from "./EnhanceHttpResponse";
  */
 export default class StaticFilesRouter {
 
-    private readonly files: Record<string,string> = {};
+    private readonly files: Record<string,{path: string, contentType: string | null}> = {};
+    //Custom content type extension map.
+    //The key is the extension in lowercase and the 
+    //value is the corresponding content type.
+    public customContentTypeResolutionMap: Record<string,string> = {};
 
     /**
      * @description
@@ -23,15 +28,15 @@ export default class StaticFilesRouter {
      * @example
      * file("dist/style.css","/myStyles/styles.css")
      * @param pattern
-     * @param file
+     * @param filePath
      * @param override
      */
-    file(file: string,pattern?: string,override?: boolean) {
-        if(!pattern) pattern = "/" + basename(file);
+    file(filePath: string,pattern?: string,override?: boolean) {
+        if(!pattern) pattern = "/" + basename(filePath);
         else if(pattern[0] !== '/') pattern = '/' + pattern;
 
         if(!override && this.files[pattern] != null) throw new Error(`Error pattern already used for file: ${this.files[pattern]}.`);
-        this.files[pattern] = file;
+        this.files[pattern] = {path: filePath,contentType: lockupMimeType(filePath,this.customContentTypeResolutionMap)};
     }
 
     /**
@@ -71,18 +76,20 @@ export default class StaticFilesRouter {
      * Handles the incoming request.
      * Returns false when the response cannot be handled or a
      * truthy value when the response can be handled.
-     * The truthy value is either a promise object
-     * (that resolves when the file writing has been finished) or
-     * a true bool value when a redirect response has been sent.
+     * The truthy value is a promise and rejected errors needs to be handled.
+     * It resolves when the file writing has been finished or 
+     * is resolved on a redirect.
      * @param req
      * @param res
      */
-    handle(req: HttpRequest,res: HttpResponse): boolean | Promise<void> {
+    handle(req: HttpRequest,res: HttpResponse): false | Promise<void> {
         if(req.getMethod() === 'get') {
             const url = req.getUrl();
             const file = this.files[url];
             if(file != null) {
-                return res.writeFile(file,{
+                if(file.contentType != null) 
+                    res.headers['content-type'] = file.contentType;
+                return res.writeFile(file.path,{
                     'if-modified-since': req.getHeader('if-modified-since'),
                     range: req.getHeader('range'),
                     'accept-encoding': req.getHeader('accept-encoding')
@@ -90,7 +97,7 @@ export default class StaticFilesRouter {
             }
             else if(url.endsWith("/") && this.files[url.slice(0,-1)] != null) {
                 res.redirect(url.slice(0,-1));
-                return true;
+                return Promise.resolve();
             }
         }
         return false;
