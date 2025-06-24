@@ -14,7 +14,7 @@ import {
 } from "ziron-errors";
 import Server from "./Server";
 import isIp = require('is-ip');
-import {tryGetClientIpFromHeaders, Writable} from "./Utils";
+import {ensureError, tryGetClientIpFromHeaders, Writable} from "./Utils";
 import {
     BadConnectionType,
     Transport,
@@ -277,8 +277,9 @@ export default class Socket
             this.setAuth(plainAuthToken,signedAuthToken);
             if(successCb) successCb();
         }
-        catch (err: any) {
-            if(err && err.badAuthToken) this._server._emit('badSocketAuthToken',this,err,signedAuthToken);
+        catch (err) {
+            if(err instanceof Error && (err as any).badAuthToken) 
+                this._server._emit('badSocketAuthToken',this,err,signedAuthToken);
             throw err;
         }
     }
@@ -317,10 +318,10 @@ export default class Socket
         else {
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
-                catch (err: any) {
+                catch (err) {
                     if(err instanceof Block) return reject(err);
                     else {
-                        this._server._emit('error', err);
+                        this._server._emit('error', ensureError(err));
                         return reject(new Block(4403,"Subscribe was blocked by the subscribe middleware"));
                     }
                 }
@@ -357,10 +358,10 @@ export default class Socket
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
-            catch (err: any) {
+            catch (err) {
                 if(err instanceof Block) return reject(err);
                 else {
-                    this._server._emit('error', err);
+                    this._server._emit('error', ensureError(err));
                     return reject(new Block(4403,"Publish was blocked by the publish in middleware"))
                 }
             }
@@ -376,8 +377,8 @@ export default class Socket
         if(typeof channel !== "string") return;
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
-            catch (err: any) {
-                if(!(err instanceof Block)) this._server._emit('error', err);
+            catch (err) {
+                if(!(err instanceof Block)) this._server._emit('error', ensureError(err));
                 return;
             }
         }

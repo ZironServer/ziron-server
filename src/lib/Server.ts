@@ -22,7 +22,7 @@ import {
 } from 'ziron-ws';
 import EventEmitter from "emitix";
 import {ServerProtocolError} from "ziron-errors";
-import {preprocessPath, Writable} from "./Utils";
+import {preprocessPath, ensureError, Writable} from "./Utils";
 import {InternalServerTransmits} from "ziron-events";
 import {Block} from "./MiddlewareUtils";
 import ChannelExchange from "./ChannelExchange";
@@ -409,14 +409,17 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     if(!resAborted) res.upgrade({req: upgradeRequest}, secWebSocketKey,
                         secWebSocketProtocol, secWebSocketExtensions, context);
                 }
-                catch (err: any) {
+                catch (err) {
                     if(err instanceof Block) {
                         if(!resAborted) Server._abortUpgrade(res, err.code, err.message || 'Handshake was blocked by the handshake middleware');
                     }
                     else {
-                        this._emit('error', err);
-                        if(!resAborted) Server._abortUpgrade(res, err?.code ?? 403,
-                            'Handshake was blocked by the handshake middleware');
+                        this._emit('error', ensureError(err));
+                        if(!resAborted) 
+                            Server._abortUpgrade(res, 
+                                typeof (err as any)?.code === "number" ? (err as any).code : 403,
+                                'Handshake was blocked by the handshake middleware'
+                            );
                     }
                 }
             })();
@@ -444,12 +447,13 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
             if(this.socketMiddleware){
                 try {await this.socketMiddleware(zSocket as ES);}
-                catch (err: any) {
+                catch (err) {
                     if(err instanceof Block)
                         zSocket.disconnect(err.code,err.message || 'Connection was blocked by the socket middleware');
                     else {
-                        this._emit('error', err);
-                        zSocket.disconnect(err?.code ?? 4403,'Connection was blocked by the socket middleware');
+                        this._emit('error', ensureError(err));
+                        zSocket.disconnect(typeof (err as any)?.code === "number" ? (err as any).code : 4403,
+                            'Connection was blocked by the socket middleware');
                     }
                     return;
                 }
@@ -461,7 +465,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     await zSocket._processAuthToken(signedToken);
                     authTokenState = 0;
                 }
-                catch (err: any) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
+                catch (err) {authTokenState = (err && (err as any).badAuthToken) ? 2 : 1;}
             }
 
             const readyData = await this.connectionHandler(zSocket as ES);
@@ -469,9 +473,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
-        catch (err: any) {
-            this._emit('error', err);
-            zSocket.disconnect(err?.code ?? 1011,'Unknown connection error');
+        catch (err) {
+            this._emit('error', ensureError(err));
+            zSocket.disconnect(typeof (err as any)?.code === "number" ? (err as any).code : 1011,
+                'Unknown connection error');
         }
     }
 
@@ -530,7 +535,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private async _processHttpHealthCheckRequest(res: HttpResponse) {
         let healthy: boolean = false;
         try {healthy = await this.healthCheck()}
-        catch (err: any) {this._emit('error', err)}
+        catch (err) {this._emit('error', ensureError(err))}
 
         if (!res.available) return;
         res.cork(() => {
