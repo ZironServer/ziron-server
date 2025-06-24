@@ -136,13 +136,13 @@ export default class AuthEngine {
     }
 
     public async signToken(token: any, options: SignOptions = {}): Promise<string> {
-        return new Promise((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
             sign(token, this._signatureKey,
                 Object.assign({},
                     (typeof token === 'object' && token.exp != null) ?
                         this._defaultSignOptionsWithoutExp : this._defaultSignOptions, options),
                 (err, signedToken) => {
-                err ? reject(err) : resolve(signedToken);
+                err ? reject(err) : resolve(signedToken!);
             });
         });
     }

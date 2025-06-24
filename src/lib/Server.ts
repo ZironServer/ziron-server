@@ -409,13 +409,13 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     if(!resAborted) res.upgrade({req: upgradeRequest}, secWebSocketKey,
                         secWebSocketProtocol, secWebSocketExtensions, context);
                 }
-                catch (err) {
+                catch (err: any) {
                     if(err instanceof Block) {
                         if(!resAborted) Server._abortUpgrade(res, err.code, err.message || 'Handshake was blocked by the handshake middleware');
                     }
                     else {
                         this._emit('error', err);
-                        if(!resAborted) Server._abortUpgrade(res, err.code ?? 403,
+                        if(!resAborted) Server._abortUpgrade(res, err?.code ?? 403,
                             'Handshake was blocked by the handshake middleware');
                     }
                 }
@@ -444,12 +444,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
             if(this.socketMiddleware){
                 try {await this.socketMiddleware(zSocket as ES);}
-                catch (err) {
+                catch (err: any) {
                     if(err instanceof Block)
                         zSocket.disconnect(err.code,err.message || 'Connection was blocked by the socket middleware');
                     else {
                         this._emit('error', err);
-                        zSocket.disconnect(err.code ?? 4403,'Connection was blocked by the socket middleware');
+                        zSocket.disconnect(err?.code ?? 4403,'Connection was blocked by the socket middleware');
                     }
                     return;
                 }
@@ -461,7 +461,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     await zSocket._processAuthToken(signedToken);
                     authTokenState = 0;
                 }
-                catch (err) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
+                catch (err: any) {authTokenState = (err && err.badAuthToken) ? 2 : 1;}
             }
 
             const readyData = await this.connectionHandler(zSocket as ES);
@@ -469,9 +469,9 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
-        catch (err) {
+        catch (err: any) {
             this._emit('error', err);
-            zSocket.disconnect(err.code ?? 1011,'Unknown connection error');
+            zSocket.disconnect(err?.code ?? 1011,'Unknown connection error');
         }
     }
 
@@ -506,12 +506,15 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 res.headers['Access-Control-Allow-Headers'] = 'X-Requested-With,contenttype';
                 res.headers['Access-Control-Allow-Credentials'] = 'true';
             }
-            else return res.cork(() => {
-                res.writeStatus("401 Unauthorized");
-                res.headers['Content-Type'] = 'text/plain';
-                res.writeHeaders();
-                res.end('Failed - Invalid origin: ' + origin);
-            });
+            else {
+                res.cork(() => {
+                    res.writeStatus("401 Unauthorized");
+                    res.headers['Content-Type'] = 'text/plain';
+                    res.writeHeaders();
+                    res.end('Failed - Invalid origin: ' + origin);
+                });
+                return;
+            }
 
             if(this.options.healthEndpoint && req.getMethod() === 'get' && req.getPath() === healthPath)
                 return this._processHttpHealthCheckRequest(res);
@@ -527,7 +530,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     private async _processHttpHealthCheckRequest(res: HttpResponse) {
         let healthy: boolean = false;
         try {healthy = await this.healthCheck()}
-        catch (err) {this._emit('error', err)}
+        catch (err: any) {this._emit('error', err)}
 
         if (!res.available) return;
         res.cork(() => {

@@ -277,7 +277,7 @@ export default class Socket
             this.setAuth(plainAuthToken,signedAuthToken);
             if(successCb) successCb();
         }
-        catch (err) {
+        catch (err: any) {
             if(err && err.badAuthToken) this._server._emit('badSocketAuthToken',this,err,signedAuthToken);
             throw err;
         }
@@ -317,7 +317,7 @@ export default class Socket
         else {
             if(this._server.subscribeMiddleware) {
                 try {await this._server.subscribeMiddleware(this,channel);}
-                catch (err) {
+                catch (err: any) {
                     if(err instanceof Block) return reject(err);
                     else {
                         this._server._emit('error', err);
@@ -357,7 +357,7 @@ export default class Socket
         if(typeof channel !== "string") return reject(new InvalidArgumentsError('Channel must be a string.'));
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
-            catch (err) {
+            catch (err: any) {
                 if(err instanceof Block) return reject(err);
                 else {
                     this._server._emit('error', err);
@@ -376,7 +376,7 @@ export default class Socket
         if(typeof channel !== "string") return;
         if(this._server.publishInMiddleware) {
             try {await this._server.publishInMiddleware(this,channel,data[1]);}
-            catch (err) {
+            catch (err: any) {
                 if(!(err instanceof Block)) this._server._emit('error', err);
                 return;
             }
