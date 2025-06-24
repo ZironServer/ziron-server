@@ -52,7 +52,7 @@ export default class UpgradeRequest<T = any> {
             acceptLanguage: req.getHeader('accept-language'),
             userAgent: req.getHeader('user-agent')
         };
-        this.query = req.getQuery();
+        this.query = req.getQuery() || "";
         if(this.query.length){
             try {
                 const parsedArgs = JSON.parse(decodeURIComponent(this.query));
