@@ -5,7 +5,7 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import {HttpResponse as RawHttpResponse} from "ziron-ws";
-import {createReadStream, statSync} from "fs";
+import {createReadStream, promises as fsPromises} from "fs";
 import {lockupMimeType} from "./MimeLockup";
 import {Writable} from "../Utils";
 
@@ -174,7 +174,8 @@ export async function sendFileToRes(res: HttpResponse,
     if(!res.available) throw new Error("A file can not be sent to an unavailable response.")
     res.reserve();
 
-    let {mtime, size} = statSync(path);
+    let {mtime, size} = await fsPromises.stat(path);
+    if(res.closed) throw new Error("The request was aborted in the meantime.");
     mtime.setMilliseconds(0);
     const mtimeUtc = mtime.toUTCString();
 
@@ -198,6 +199,14 @@ export async function sendFileToRes(res: HttpResponse,
             res.headers['content-type'] = lookedUpType;
     }
 
+    if(size === 0) {
+        res.cork(() => {
+            res.writeHeaders();
+            res.end();
+        });
+        return;
+    }
+
     //write
     return new Promise((resolve,reject) => {
         let start = 0, end = size - 1;
@@ -216,6 +225,7 @@ export async function sendFileToRes(res: HttpResponse,
 
         res.writeHeaders();
         res.onAborted(() => {
+            (res as Writable<HttpResponse>).state = HttpResponseState.Aborted;
             readStream.destroy();
             reject(new Error("The request was aborted in the meantime."));
         });

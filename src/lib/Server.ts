@@ -514,6 +514,9 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
 
             const req = enhanceHttpRequest(rawReq),res = enhanceHttpResponse(rawRes);
 
+            if(this.options.healthEndpoint && req.getMethod() === 'get' && req.getPath() === healthPath)
+                return this._processHttpHealthCheckRequest(res);
+
             const origin = req.getHeader("origin");
             if(this.originsChecker(origin)){
                 res.headers['Access-Control-Allow-Origin'] = origin;
@@ -531,9 +534,17 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 return;
             }
 
-            if(this.options.healthEndpoint && req.getMethod() === 'get' && req.getPath() === healthPath)
-                return this._processHttpHealthCheckRequest(res);
-            else if(this.httpRequestHandler) await this.httpRequestHandler(req,res);
+            if(this.httpRequestHandler) {
+                try {await this.httpRequestHandler(req,res);}
+                catch (err) {
+                    this._emit('error', ensureError(err));
+                    if(res.available) res.cork(() => {
+                        res.writeStatus('500 Internal Server Error');
+                        res.end();
+                    });
+                    return;
+                }
+            }
 
             if(res.available) res.cork(() => {
                 res.writeStatus('426 Upgrade Required');
