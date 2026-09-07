@@ -369,7 +369,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private static _abortUpgrade(res: RawHttpResponse, code: number, message: string): void {
-        res.end(`HTTP/1.1 ${code} ${message}\r\n\r\n`,true);
+        res.cork(() => {
+            res.writeStatus(`${code} ${message}`);
+            res.end(undefined,true);
+        });
     }
 
     private _handleUpgrade(res: RawHttpResponse,req: RawHttpRequest,context: us_socket_context_t) {
@@ -391,10 +394,12 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             return Server._abortUpgrade(res,403,err.message);
         }
 
-        const upgradeRequest = new UpgradeRequest(req);
+        let upgradeRequest: UpgradeRequest;
+        try {upgradeRequest = new UpgradeRequest(req);}
+        catch (_) {return Server._abortUpgrade(res,400,'Bad request');}
 
         if(upgradeRequest.headers.secWebSocketProtocol !== 'ziron')
-            return Server._abortUpgrade(res,4800,'Unsupported protocol');
+            return Server._abortUpgrade(res,400,'Unsupported protocol');
 
         const {
             secWebSocketKey,
@@ -448,6 +453,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
             if(this.socketMiddleware){
                 try {await this.socketMiddleware(zSocket as ES);}
                 catch (err) {
+                    if(!zSocket.open) return;
                     if(err instanceof Block)
                         zSocket.disconnect(err.code,err.message || 'Connection was blocked by the socket middleware');
                     else {
@@ -457,6 +463,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     }
                     return;
                 }
+                if(!zSocket.open) return;
             }
 
             let authTokenState = -1;
@@ -466,14 +473,17 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                     authTokenState = 0;
                 }
                 catch (err) {authTokenState = (err && (err as any).badAuthToken) ? 2 : 1;}
+                if(!zSocket.open) return;
             }
 
             const readyData = await this.connectionHandler(zSocket as ES);
+            if(!zSocket.open) return;
             const res = [this.options.pingInterval,this.options.maxPayloadSize,authTokenState];
             if(readyData !== undefined) res.push(readyData);
             zSocket.transmit(InternalServerTransmits.ConnectionReady,res);
         }
         catch (err) {
+            if(!zSocket.open) return;
             this._emit('error', ensureError(err));
             zSocket.disconnect(typeof (err as any)?.code === "number" ? (err as any).code : 1011,
                 'Unknown connection error');
