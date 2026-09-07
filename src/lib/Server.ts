@@ -358,6 +358,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         this._pingTicker = setInterval(() => {
             this._app.publish('broadcast',PING,true);
         },this.options.pingInterval);
+        this._pingTicker.unref();
     }
 
     private _startAuthExpireCheck() {
@@ -366,6 +367,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
                 this.clients[id]._checkAuthTokenExpire();
             }
         },this.options.auth.expireCheckInterval ?? 12000);
+        this._authTokenExpireCheckerTicker.unref();
     }
 
     private static _abortUpgrade(res: RawHttpResponse, code: number, message: string): void {
@@ -680,6 +682,8 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
      */
     terminate() {
         this.stopListen();
+        clearInterval(this._pingTicker);
+        clearInterval(this._authTokenExpireCheckerTicker);
         Object.values(this.clients).forEach(client => client._terminate());
         (this as Writable<Server<E,ES>>).clients = {};
         (this as Writable<Server<E,ES>>).clientCount = 0;
