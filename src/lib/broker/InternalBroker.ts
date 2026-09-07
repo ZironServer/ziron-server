@@ -60,6 +60,7 @@ export default class InternalBroker {
     }
 
     socketSubscribe(socket: Socket, channel: string) {
+        if(!socket.open) return;
         if(!this.socketSubscriptions.has(channel)) {
             if(!this.exchangeChannels.has(channel))
                 this.externalBrokerClient.subscribe(channel);
@@ -91,7 +92,7 @@ export default class InternalBroker {
         if(this.socketSubscriptions.has(channel)) {
             const pack = Transport.prepareMultiTransmit
                 (InternalServerTransmits.Publish,[channel,data],{processComplexTypes});
-            const source = publisher ? publisher._socket : this._server._app,
+            const source = (publisher && publisher.open) ? publisher._socket : this._server._app,
                 len = pack.length,
                 internalChannel = "C" + channel;
 

@@ -180,6 +180,7 @@ export default class Socket
     }
 
     private _sendRaw(data: string | ArrayBuffer, binary?: boolean, batch?: boolean) {
+        if(!this.open) return;
         this._socket.send(data,binary,this._server._shouldCompress(data,binary,batch));
     }
 
@@ -325,6 +326,7 @@ export default class Socket
                         return reject(new Block(4403,"Subscribe was blocked by the subscribe middleware"));
                     }
                 }
+                if(!this.open) return;
             }
             if(!this.subscriptions.includes(channel)) {
                 this._server._internalBroker.socketSubscribe(this,channel);
@@ -365,6 +367,7 @@ export default class Socket
                     return reject(new Block(4403,"Publish was blocked by the publish in middleware"))
                 }
             }
+            if(!this.open) return;
         }
         this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
         end();
@@ -381,6 +384,7 @@ export default class Socket
                 if(!(err instanceof Block)) this._server._emit('error', ensureError(err));
                 return;
             }
+            if(!this.open) return;
         }
         this._server._internalBroker.publish(channel,data[1],type !== DataType.JSON,this);
     }
