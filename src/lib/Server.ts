@@ -371,8 +371,10 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
     }
 
     private static _abortUpgrade(res: RawHttpResponse, code: number, message: string): void {
+        //block codes (4xxx) are not valid HTTP status codes
+        const status = (code >= 100 && code <= 599) ? code : 403;
         res.cork(() => {
-            res.writeStatus(`${code} ${message}`);
+            res.writeStatus(`${status} ${message}`);
             res.end(undefined,true);
         });
     }
