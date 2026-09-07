@@ -41,7 +41,7 @@ export function createOriginsChecker(validOrigins: string[] | string | null): Or
             for(let i = 0; i < originsLength; i++) {
                 ok = origins[i] === (url.hostname + ':' + port) ||
                     origins[i] === (url.hostname + ':*') ||
-                    origins[i] === ('*:' + url.port);
+                    origins[i] === ('*:' + port);
                 if(ok) break;
             }
         }
