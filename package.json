@@ -18,28 +18,27 @@
     "email": "lucacode1@gmail.com"
   },
   "dependencies": {
-    "base64id": "2.0.0",
-    "uniqid": "^5.4.0",
-    "emitix": "^2.3.2",
     "@types/jsonwebtoken": "^9.0.10",
-    "jsonwebtoken": "^9.0.2",
-    "ziron-ws": "20.52.0",
+    "@types/node": "^18.16.3",
+    "base64id": "2.0.0",
+    "docker-secret": "^1.2.4",
+    "emitix": "^2.3.2",
+    "is-ip": "^3.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "uniqid": "^5.4.0",
+    "ziron-engine": "2.5.0",
     "ziron-errors": "1.5.0",
     "ziron-events": "1.5.0",
-    "ziron-engine": "2.5.0",
-    "@types/node": "^18.16.3",
-    "is-ip": "^3.1.0",
-    "docker-secret": "^1.2.4"
+    "ziron-ws": "20.70.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
+    "@types/uniqid": "^5.3.2",
+    "del": "^5.1.0",
     "gulp": "^5.0.1",
-    "gulp-optimize-js": "1.1.0",
     "gulp-terser": "1.2.0",
     "gulp-typescript": "^5.0.1",
-    "del": "^5.1.0",
     "ts-node": "^8.0.3",
-    "@types/uniqid": "^5.3.2"
+    "typescript": "^5.8.3"
   },
   "overrides": {
     "gulp-typescript": {
@@ -57,5 +56,8 @@
     "ziron",
     "fast",
     "lightweight"
-  ]
+  ],
+  "engines": {
+    "node": ">=22"
+  }
 }
