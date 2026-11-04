@@ -106,12 +106,47 @@ export default class Socket
         return this.upgradeRequest.attachment;
     }
 
+    /**
+     * @description
+     * The first address of the X-Forwarded-For header or, without that header, the peer address.
+     * Notice that any client can send the header, so this address is only trustworthy
+     * when every connection comes through a proxy that sets it.
+     * To decide yourself which proxies to trust, use peerAddress and forwardedFor.
+     */
     public readonly remoteAddress: string;
     /**
      * @description
      * Either 4 or 6.
      */
     public readonly remoteFamily: number;
+
+    /**
+     * @description
+     * The address of the TCP peer, taken from the connection, never from a header
+     * (IPv6 in full, IPv4 possibly mapped into IPv6). Behind a proxy it is the proxy's address.
+     * Empty when it is unknown.
+     */
+    get peerAddress(): string {
+        return this.upgradeRequest.peerAddress;
+    }
+
+    /**
+     * @description
+     * The port of the TCP peer, 0 when it is unknown.
+     */
+    get peerPort(): number {
+        return this.upgradeRequest.peerPort;
+    }
+
+    /**
+     * @description
+     * The raw X-Forwarded-For header of the upgrade request,
+     * an empty string when there was none.
+     * It is not evaluated; only the proxies you trust can vouch for its entries.
+     */
+    get forwardedFor(): string {
+        return this.upgradeRequest.headers.xForwardedFor ?? '';
+    }
 
     public readonly subscriptions: ReadonlyArray<string> = [];
 
@@ -123,7 +158,7 @@ export default class Socket
         this.upgradeRequest = socket.req;
 
         this.remoteAddress = tryGetClientIpFromHeaders(this.upgradeRequest.headers) ||
-            Buffer.from(socket.getRemoteAddressAsText()).toString();
+            this.upgradeRequest.peerAddress;
         this.remoteFamily = isIp.version(this.remoteAddress) || 4;
 
         this._transport = new Transport({

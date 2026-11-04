@@ -4,7 +4,7 @@ GitHub: LucaCode
 Copyright(c) Ing. Luca Gian Scaringella
  */
 
-import {HttpRequest} from "ziron-ws";
+import {HttpRequest, HttpResponse} from "ziron-ws";
 
 /**
  * @description
@@ -34,8 +34,32 @@ export default class UpgradeRequest<T = any> {
     readonly attachment: T;
     readonly headers: Readonly<UpgradeHeaders>;
     readonly signedToken: string | null;
+    /**
+     * @description
+     * The address of the TCP peer that sent the upgrade request,
+     * as uWebSockets writes it (IPv6 in full, IPv4 possibly mapped into IPv6).
+     * It is taken from the connection, never from a header;
+     * behind a proxy it is the proxy's address.
+     * Empty when it is unknown.
+     */
+    readonly peerAddress: string;
+    /**
+     * @description
+     * The port of the TCP peer that sent the upgrade request.
+     * 0 when it is unknown.
+     */
+    readonly peerPort: number;
 
-    constructor(req: HttpRequest) {
+    /**
+     * @param req
+     * @param res
+     * The response of the upgrade request.
+     * The peer is read from it, which must happen before the upgrade
+     * because uWebSockets no longer knows the peer of an upgraded socket.
+     */
+    constructor(req: HttpRequest, res?: HttpResponse) {
+        this.peerAddress = res ? Buffer.from(res.getRemoteAddressAsText()).toString() : '';
+        this.peerPort = res ? res.getRemotePort() : 0;
         this.url = req.getUrl();
         this.method = req.getMethod();
 

@@ -399,7 +399,7 @@ export default class Server<E extends { [key: string]: any[]; } = {},ES extends 
         }
 
         let upgradeRequest: UpgradeRequest;
-        try {upgradeRequest = new UpgradeRequest(req);}
+        try {upgradeRequest = new UpgradeRequest(req,res);}
         catch (_) {return Server._abortUpgrade(res,400,'Bad request');}
 
         if(upgradeRequest.headers.secWebSocketProtocol !== 'ziron')
