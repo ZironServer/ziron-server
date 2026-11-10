@@ -5,7 +5,7 @@ Copyright(c) Ing. Luca Gian Scaringella
  */
 
 import Socket from "../Socket";
-import {Transport} from "ziron-engine";
+import {JSONString, Transport} from "ziron-engine";
 import {InternalServerTransmits} from "ziron-events";
 import {defaultExternalBrokerClient, ExternalBrokerClient} from "./ExternalBrokerClient";
 import ChannelExchange from "../ChannelExchange";
@@ -106,8 +106,9 @@ export default class InternalBroker {
     _processPublish(channel: string, data: any, processComplexTypes: boolean, external: boolean, publisher?: Socket) {
         if(this.exchangeChannels.has(channel)) this.exchange._emitPublish(channel,data,external,processComplexTypes);
         if(this.socketSubscriptions.has(channel)) {
-            const pack = Transport.prepareMultiTransmit
-                (InternalServerTransmits.Publish,[channel,data],{processComplexTypes});
+            //prepared JSON (a JSONString) goes in as it is: the same message as from the value
+            const pack = Transport.prepareMultiTransmit(InternalServerTransmits.Publish,data instanceof JSONString ?
+                new JSONString('[' + JSON.stringify(channel) + ',' + data.toString() + ']') : [channel,data],{processComplexTypes});
             const source = (publisher && publisher.open) ? publisher._socket : this._server._app,
                 len = pack.length,
                 internalChannel = "C" + channel;

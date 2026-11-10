@@ -18,6 +18,11 @@ export default class ChannelExchange {
     public readonly subscriptions: ReadonlySet<string>;
     public subscribe: (channel: string) => void;
     public unsubscribe: (channel: string) => void;
+    /**
+     * Publishes data in a channel to the subscribers of this server and the other servers.
+     * Data that is a JSONString (prepared JSON, without complex types) goes out without converting it again;
+     * the listeners of this server get it as it is, the others the value.
+     */
     public publish: (channel: string, data: any, options?: ComplexTypesOption & PublisherOption) => void;
 
     private readonly _publishEmitter: PublishEmitter = new EventEmitter();
