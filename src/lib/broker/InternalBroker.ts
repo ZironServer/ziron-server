@@ -32,7 +32,9 @@ export default class InternalBroker {
             unsubscribe: this._exchangeUnsubscribe.bind(this),
             publish: (channel,data,options) => {
                 this.publish(channel,data,options?.processComplexTypes,options?.publisher);
-            }
+            },
+            isSubscriptionActive: channel => this.externalBrokerClient.isSubscriptionActive ?
+                this.externalBrokerClient.isSubscriptionActive(channel) : true
         });
     }
 
@@ -42,6 +44,20 @@ export default class InternalBroker {
 
     processExternalPublish(channel: string, data: any, complexDataType: boolean) {
         this._processPublish(channel,data,complexDataType,true);
+    }
+
+    /**
+     * Called by the external broker client when the subscription of a channel became active or was cut.
+     */
+    processSubscriptionChange(channel: string, active: boolean) {
+        this.exchange._emitSubscriptionChange(channel,active);
+    }
+
+    /**
+     * Called by the external broker client when a publish may not have reached the broker.
+     */
+    processPublishLoss(channel: string) {
+        this.exchange._emitPublishLoss(channel);
     }
 
     private _exchangeSubscribe(channel: string) {
